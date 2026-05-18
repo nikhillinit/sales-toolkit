@@ -1,24 +1,35 @@
 /**
  * Claim Scanner — Unified Signal OS
- * Live banned-term detection for rep-written copy.
+ * Dual-layer compliance scan:
+ *   Layer 1: findBannedTerms (local lib) — broad banned-term list
+ *   Layer 2: scanForClaims (@shared) — Hard Claim guardrails HC-01..HC-05
  * Label-first, evidence-first, no overclaim.
  */
 import { findBannedTerms, BANNED_TERMS } from '@/lib/claimScanner';
+import { scanForClaims, HARD_CLAIMS, type ClaimHit } from '@shared/claims';
 import { useState } from 'react';
 
 export default function ClaimScanner() {
   const [input, setInput] = useState('');
-  const matches = input.trim() ? findBannedTerms(input) : [];
-  const isClean = input.trim().length > 0 && matches.length === 0;
-  const isDirty = matches.length > 0;
 
-  // Build highlighted HTML
+  // Layer 1: broad banned-term scan
+  const matches = input.trim() ? findBannedTerms(input) : [];
+
+  // Layer 2: hard-claim guardrails (HC-01..HC-05)
+  const claimHits: ClaimHit[] = input.trim() ? scanForClaims(input) : [];
+  const blockHits = claimHits.filter(h => h.severity === 'block');
+  const warnHits  = claimHits.filter(h => h.severity === 'warn');
+
+  const isClean = input.trim().length > 0 && matches.length === 0 && claimHits.length === 0;
+  const isDirty = matches.length > 0 || blockHits.length > 0;
+  const hasWarnings = warnHits.length > 0 && !isDirty;
+
+  // Build highlighted parts for banned-term preview
   const getHighlighted = () => {
     if (!input.trim() || matches.length === 0) return null;
     const lower = input.toLowerCase();
     const parts: { text: string; banned: boolean }[] = [];
     let lastIdx = 0;
-
     matches.forEach(({ term, start }) => {
       const actualStart = lower.indexOf(term.toLowerCase(), Math.max(0, start - 2));
       if (actualStart === -1) return;
@@ -36,6 +47,10 @@ export default function ClaimScanner() {
 
   const highlighted = getHighlighted();
 
+  const resultBg    = isDirty ? '#FEF2F2' : hasWarnings ? '#FFFBEB' : '#F0FDF4';
+  const resultBorder = isDirty ? '#A82820' : hasWarnings ? '#D97706' : '#2E7D32';
+  const resultColor  = isDirty ? '#A82820' : hasWarnings ? '#92400E' : '#2E7D32';
+
   return (
     <div className="slide-up" style={{ padding: '16px', maxWidth: '600px', margin: '0 auto' }}>
       {/* Header */}
@@ -45,7 +60,7 @@ export default function ClaimScanner() {
           Copy <span style={{ color: '#A82820' }}>Compliance</span>
         </h2>
         <p style={{ fontSize: '14px', color: '#4A5159', margin: 0 }}>
-          Paste any email, pitch, or message. Banned terms highlight red.
+          Paste any email, pitch, or message. Banned terms and hard-claim violations highlight red.
         </p>
       </div>
 
@@ -75,7 +90,7 @@ export default function ClaimScanner() {
         />
       </div>
 
-      {/* Result */}
+      {/* Result summary */}
       {input.trim() && (
         <div
           style={{
@@ -84,28 +99,37 @@ export default function ClaimScanner() {
             marginBottom: '12px',
             fontWeight: 600,
             fontSize: '13px',
-            background: isDirty ? '#FEF2F2' : '#F0FDF4',
-            border: `1px solid ${isDirty ? '#A82820' : '#2E7D32'}`,
-            color: isDirty ? '#A82820' : '#2E7D32',
+            background: resultBg,
+            border: `1px solid ${resultBorder}`,
+            color: resultColor,
           }}
         >
           {isDirty ? (
             <>
-              ⚠️ {matches.length} banned term{matches.length > 1 ? 's' : ''} found:{' '}
+              ⚠️ {matches.length + blockHits.length} issue{matches.length + blockHits.length !== 1 ? 's' : ''} found:{' '}
               {matches.map((m, i) => (
-                <span key={i}>
+                <span key={`banned-${i}`}>
                   <span className="banned-highlight">{m.term}</span>
                   {i < matches.length - 1 ? ', ' : ''}
                 </span>
               ))}
+              {blockHits.length > 0 && matches.length > 0 && ' · '}
+              {blockHits.map((h, i) => (
+                <span key={`block-${i}`}>
+                  <span className="banned-highlight">{h.matched}</span>
+                  {i < blockHits.length - 1 ? ', ' : ''}
+                </span>
+              ))}
             </>
+          ) : hasWarnings ? (
+            <>⚡ {warnHits.length} soft-claim warning{warnHits.length !== 1 ? 's' : ''} — review before sending.</>
           ) : (
-            '✓ Clean — no banned terms detected.'
+            '✓ Clean — no banned terms or hard-claim violations.'
           )}
         </div>
       )}
 
-      {/* Highlighted preview */}
+      {/* Highlighted banned-term preview */}
       {highlighted && isDirty && (
         <div
           style={{
@@ -128,6 +152,73 @@ export default function ClaimScanner() {
               <span key={i}>{part.text}</span>
             )
           )}
+        </div>
+      )}
+
+      {/* Hard-claim violations panel */}
+      {claimHits.length > 0 && (
+        <div
+          style={{
+            background: '#fff',
+            border: '1px solid #C8CCD2',
+            borderRadius: '4px',
+            padding: '12px',
+            marginBottom: '12px',
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontWeight: 700,
+              fontSize: '12px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              color: '#8A6A14',
+              marginBottom: '8px',
+            }}
+          >
+            Hard-Claim Guardrails
+          </div>
+          {claimHits.map((hit, i) => (
+            <div
+              key={i}
+              style={{
+                padding: '8px 10px',
+                marginBottom: '6px',
+                borderLeft: `3px solid ${hit.severity === 'block' ? '#A82820' : '#D97706'}`,
+                background: hit.severity === 'block' ? '#FEF2F2' : '#FFFBEB',
+                borderRadius: '0 3px 3px 0',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+                <span
+                  style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    color: hit.severity === 'block' ? '#A82820' : '#92400E',
+                  }}
+                >
+                  {hit.code} · {hit.severity.toUpperCase()}
+                </span>
+                <span
+                  style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: '10px',
+                    color: '#4A5159',
+                    background: '#EFEBE0',
+                    padding: '1px 5px',
+                    borderRadius: '2px',
+                  }}
+                >
+                  "{hit.matched}"
+                </span>
+              </div>
+              <div style={{ fontSize: '12px', color: '#1A1D22', fontFamily: "'Source Sans 3', sans-serif" }}>
+                <strong>Say instead:</strong> {hit.suggestion}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -160,6 +251,7 @@ export default function ClaimScanner() {
           border: '1px solid #C8CCD2',
           borderRadius: '4px',
           padding: '14px',
+          marginBottom: '10px',
         }}
       >
         <div className="os-h2" style={{ marginTop: 0 }}>Banned Terms Reference</div>
@@ -185,11 +277,54 @@ export default function ClaimScanner() {
             </span>
           ))}
         </div>
-
         <div className="os-warn" style={{ marginTop: '12px' }}>
           <strong>Rule 06:</strong> No hero claims. Never "proven" or unverified.<br />
           <strong>Rule 07:</strong> Cite the label. Supplement Facts = truth.
         </div>
+      </div>
+
+      {/* Hard-claim rules reference */}
+      <div
+        style={{
+          background: '#fff',
+          border: '1px solid #C8CCD2',
+          borderRadius: '4px',
+          padding: '14px',
+        }}
+      >
+        <div className="os-h2" style={{ marginTop: 0 }}>Hard-Claim Guardrails (HC-01–HC-05)</div>
+        <p style={{ fontSize: '13px', color: '#4A5159', marginBottom: '10px' }}>
+          Structural violations that require rewrite before sending.
+        </p>
+        {HARD_CLAIMS.map(rule => (
+          <div
+            key={rule.code}
+            style={{
+              padding: '7px 10px',
+              marginBottom: '6px',
+              borderLeft: `3px solid ${rule.severity === 'block' ? '#A82820' : '#D97706'}`,
+              background: '#F4F1EA',
+              borderRadius: '0 3px 3px 0',
+            }}
+          >
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'baseline' }}>
+              <span
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  color: rule.severity === 'block' ? '#A82820' : '#92400E',
+                  flexShrink: 0,
+                }}
+              >
+                {rule.code}
+              </span>
+              <span style={{ fontSize: '12px', color: '#1A1D22', fontFamily: "'Source Sans 3', sans-serif" }}>
+                {rule.say}
+              </span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

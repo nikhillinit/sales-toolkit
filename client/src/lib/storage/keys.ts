@@ -2,14 +2,20 @@
  * Storage keys — single source of truth for all IndexedDB and legacy keys.
  * IndexedDB is the source of truth for all domain data.
  * localStorage is allowed only for tiny UI preferences (theme, panel state).
+ *
+ * v2 changes:
+ *   - networkLogs → repCaptures  (fieldkit:v2:repCaptures)
+ *     The v1 key is kept as a deprecated alias for the migration path.
  */
 
-export const FIELDKIT_SCHEMA_VERSION = 1;
+export const FIELDKIT_SCHEMA_VERSION = 2;
 
 export const STORAGE_KEYS = {
   storyVault: 'fieldkit:v1:storyVault',
   laneSelector: 'fieldkit:v1:laneSelector',
+  /** @deprecated — use repCaptures */
   networkLogs: 'fieldkit:v1:networkLogs',
+  repCaptures: 'fieldkit:v2:repCaptures',
   formDraft: 'fieldkit:v1:formDraft',
   trials: 'fieldkit:v1:trials',
   stats: 'fieldkit:v1:stats',

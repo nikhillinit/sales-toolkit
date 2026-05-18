@@ -12,6 +12,8 @@ import {
   useUiActions,
   type Trial,
 } from '@/contexts/AppState';
+import EvidencePackGate from '@/components/EvidencePackGate';
+import { SEGMENTS, type SegmentCode } from '@shared/segments';
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import PreShipGate from '@/components/PreShipGate';
@@ -38,6 +40,12 @@ const SECTIONS: Section[] = [
     fields: [
       { id: 'act-acct',  label: 'Account / Station', example: 'e.g. Station 12, MWR Fort Bragg',       type: 'text',     required: true },
       { id: 'act-human', label: 'Named Human',        example: 'e.g. Sgt. Ramirez, MWR coordinator',   type: 'text',     required: true },
+      {
+        id: 'act-segment', label: 'Segment', example: '',
+        type: 'select',
+        options: SEGMENTS.map(s => ({ value: s.code, label: s.label })),
+        required: true,
+      },
     ],
   },
   {
@@ -114,6 +122,10 @@ export default function Activate() {
   const [, setLocation] = useLocation();
   const [values, setValues] = useState<Record<string, string>>({});
   const [gateOpen, setGateOpen] = useState(false);
+  const [evidenceGateOpen, setEvidenceGateOpen] = useState(false);
+
+  // Derived: is this a healthcare account?
+  const isHealthcare = (values['act-segment'] as SegmentCode | undefined) === 'healthcare';
 
   useEffect(() => {
     const restored: Record<string, string> = {};
@@ -200,7 +212,7 @@ export default function Activate() {
           onBlur={() => saveDraft()}
           style={{ ...baseInputStyle, ...filledStyle, cursor: 'pointer' }}
         >
-          <option value="">Select trial type…</option>
+          <option value="">{field.id === 'act-segment' ? 'Select segment…' : 'Select trial type…'}</option>
           {field.options?.map(o => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
@@ -422,7 +434,12 @@ export default function Activate() {
               toast('⚠️ Complete all required Activation Standard fields.');
               return;
             }
-            setGateOpen(true);
+            // Healthcare segment: evidence gate must be confirmed first
+            if (isHealthcare) {
+              setEvidenceGateOpen(true);
+            } else {
+              setGateOpen(true);
+            }
           }}
           style={{
             width: '100%',
@@ -462,6 +479,14 @@ export default function Activate() {
         onShip={handleSave}
         trialAcct={values['act-acct']}
         trialCode={values['act-code']}
+      />
+
+      {/* Healthcare evidence gate — fires before PreShipGate for healthcare segment */}
+      <EvidencePackGate
+        open={evidenceGateOpen}
+        onOpenChange={setEvidenceGateOpen}
+        onConfirm={() => setGateOpen(true)}
+        accountName={values['act-acct']}
       />
     </div>
   );

@@ -1,6 +1,27 @@
 import { Badge, FlowStep, Grid2, Grid3, OsTable, Panel } from '../FieldManualPrimitives';
+import { OBJECTIONS, buildRoleplayPrefill, type ObjectionCode } from '@shared/objections';
+import { useLocation } from 'wouter';
+
+// Map OBJ card num (1-13) to the closest @shared OBJ code
+// OBJ-01..08 map directly; OBJ 9-13 use the closest semantic match
+const OBJ_CODE_MAP: Record<string, ObjectionCode> = {
+  '1':  'OBJ-01', // coffee
+  '2':  'OBJ-02', // crew won't care
+  '3':  'OBJ-03', // send me info
+  '4':  'OBJ-04', // OPSS
+  '5':  'OBJ-04', // clinically proven → closest is OPSS/certification
+  '6':  'OBJ-04', // patient safety → certification lane
+  '7':  'OBJ-05', // too expensive
+  '8':  'OBJ-06', // 120mg not enough
+  '9':  'OBJ-07', // Celsius/Monster
+  '10': 'OBJ-07', // members won't mix → incumbent loyalty
+  '11': 'OBJ-04', // can't take samples → certification/process gate
+  '12': 'OBJ-08', // never heard of you
+  '13': 'OBJ-03', // 50 free sticks → stall/oversize ask
+};
 
 export default function Tool12ObjectionsMatrix() {
+  const [, setLocation] = useLocation();
   return (
       <>
         <p style={{ fontSize: '14px', marginBottom: '12px' }}>Objections are data. Create space, clarify the concern, confirm what you heard, respond with accurate knowledge, and check whether the buyer is ready to move.</p>
@@ -139,7 +160,37 @@ export default function Tool12ObjectionsMatrix() {
           <div key={obj.num} style={{ marginBottom: '12px', background: '#fff', border: '1px solid #C8CCD2', borderRadius: '3px', overflow: 'hidden' }}>
             <div style={{ background: '#1A1D22', padding: '8px 12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
               <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '10px', color: '#A82820' }}>OBJ {obj.num}</span>
-              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: '14px', color: '#fff' }}>{obj.title}</span>
+              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: '14px', color: '#fff', flex: 1 }}>{obj.title}</span>
+              {OBJ_CODE_MAP[obj.num] && (
+                <button
+                  onClick={() => {
+                    const code = OBJ_CODE_MAP[obj.num];
+                    const prefill = buildRoleplayPrefill(code);
+                    setLocation('/roleplay', {
+                      state: {
+                        __roleplayPrefill: prefill,
+                      },
+                    });
+                  }}
+                  style={{
+                    padding: '3px 8px',
+                    background: '#A82820',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '2px',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: '9px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                  title={`Drill this objection in Roleplay Simulator`}
+                >
+                  ▶ Drill
+                </button>
+              )}
             </div>
             <div style={{ padding: '8px 12px' }}>
               {obj.steps.map(([step, line]) => (

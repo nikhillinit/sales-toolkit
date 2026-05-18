@@ -11,6 +11,7 @@ export type FieldkitSlice =
   | 'storyVault'
   | 'laneSelector'
   | 'networkLogs'
+  | 'repCaptures'
   | 'formDraft'
   | 'trials'
   | 'stats'
