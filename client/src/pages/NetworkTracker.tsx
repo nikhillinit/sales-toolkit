@@ -140,7 +140,7 @@ export default function NetworkTracker() {
   };
 
   return (
-    <div style={{ padding: '16px', maxWidth: '600px', margin: '0 auto', width: '100%' }}>
+    <div style={{ padding: '16px', width: '100%' }}>
       <div className="os-kicker" style={{ marginBottom: '4px' }}>
         Tool 04
       </div>

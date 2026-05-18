@@ -372,7 +372,7 @@ export default function LaneSelector() {
 
         {/* ── SCORE TAB ── */}
         {activeTab === 'score' && (
-          <div style={{ padding: '14px 16px', maxWidth: '600px', margin: '0 auto' }}>
+          <div style={{ padding: '14px 16px' }}>
 
             {/* Segment selector */}
             <div style={{ marginBottom: '14px' }}>
@@ -604,7 +604,7 @@ export default function LaneSelector() {
 
         {/* ── COMPARE TAB ── */}
         {activeTab === 'compare' && (
-          <div style={{ padding: '14px 16px', maxWidth: '600px', margin: '0 auto' }}>
+          <div style={{ padding: '14px 16px' }}>
             <div className="os-h2" style={{ marginTop: 0 }}>Segment Comparison</div>
             <p style={{ fontSize: '13px', color: '#4A5159', marginBottom: '12px' }}>
               Highest score wins. If two lanes tie, pick the one with the timely trigger (Q4).
@@ -700,7 +700,7 @@ export default function LaneSelector() {
 
         {/* ── SUNDAY PLAN TAB ── */}
         {activeTab === 'plan' && (
-          <div style={{ padding: '14px 16px', maxWidth: '600px', margin: '0 auto' }}>
+          <div style={{ padding: '14px 16px' }}>
 
             {/* Best lane recommendation */}
             {(() => {

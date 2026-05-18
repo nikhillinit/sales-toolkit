@@ -1,10 +1,11 @@
 /**
  * Home — Unified Signal OS
  * Main app shell. Mobile-first: bottom nav, sticky header, safe-area aware.
- * On desktop: rendered inside a phone-frame for field-rep utility feel.
+ * On desktop (>768px): full-viewport layout via DesktopShell with a sidebar nav.
  */
 import AppHeader from '@/components/AppHeader';
 import BottomNav from '@/components/BottomNav';
+import { DesktopShell } from '@/components/DesktopShell';
 import DraftBanner from '@/components/DraftBanner';
 import Toast from '@/components/Toast';
 import { useUiActions, useUiState, type StepId } from '@/contexts/AppState';
@@ -240,106 +241,5 @@ export default function Home() {
     );
   }
 
-  return (
-    <>
-      {/* Desktop: phone frame */}
-      <div
-        className="desktop-wrapper"
-        style={{
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #1A1D22 0%, #2A2F38 50%, #1A1D22 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '24px',
-        }}
-      >
-        {/* Watermark */}
-        <div
-          style={{
-            position: 'fixed',
-            top: '20px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: '11px',
-            fontWeight: 700,
-            color: 'rgba(255,255,255,0.25)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.15em',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          Unified Signal OS · Restless Field Toolkit
-        </div>
-
-        {/* Phone frame */}
-        <div
-          style={{
-            width: '390px',
-            height: '844px',
-            borderRadius: '44px',
-            background: '#F4F1EA',
-            boxShadow: '0 0 0 10px #2A2F38, 0 0 0 12px #3A3F48, 0 32px 80px rgba(0,0,0,0.6)',
-            overflow: 'hidden',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          {/* Status bar notch */}
-          <div
-            style={{
-              height: '44px',
-              background: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '0 24px',
-              flexShrink: 0,
-              borderBottom: '1px solid #C8CCD2',
-            }}
-          >
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', fontWeight: 700, color: '#1A1D22' }}>
-              9:41
-            </span>
-            <div
-              style={{
-                width: '120px',
-                height: '28px',
-                background: '#1A1D22',
-                borderRadius: '14px',
-                position: 'absolute',
-                left: '50%',
-                transform: 'translateX(-50%)',
-              }}
-            />
-            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-              <span style={{ fontSize: '12px' }}>●●●●</span>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', fontWeight: 700, color: '#1A1D22' }}>100%</span>
-            </div>
-          </div>
-
-          {/* App content */}
-          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <AppShell />
-          </div>
-
-          {/* Home indicator */}
-          <div
-            style={{
-              height: '20px',
-              background: '#F4F1EA',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <div style={{ width: '120px', height: '4px', background: '#1A1D22', borderRadius: '2px', opacity: 0.3 }} />
-          </div>
-        </div>
-      </div>
-    </>
-  );
+  return <DesktopShell />;
 }
