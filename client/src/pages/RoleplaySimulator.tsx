@@ -13,6 +13,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BookOpen } from 'lucide-react';
 import { useStoryVaultContext } from '@/contexts/StoryVaultContext';
+import { idbGet, idbSet } from '@/lib/storage/idb';
+import { STORAGE_KEYS } from '@/lib/storage/keys';
 import { buildStoryContextPrefix, generateScripts, type StoryCard } from '@/lib/storyVault';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -728,6 +730,24 @@ export default function RoleplaySimulator() {
   const [feedback, setFeedback] = useState<CoachFeedback | null>(null);
   const [debriefLoading, setDebriefLoading] = useState(false);
 
+  // Debrief persistence helper
+  const saveDebrief = async (fb: CoachFeedback, finalMessages: Message[]) => {
+    try {
+      const existing = await idbGet(STORAGE_KEYS.roleplayDebriefs, []);
+      const newDebrief = {
+        id: `debrief-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        scenario: `${selectedPersona?.name} - ${selectedScenario?.label}`,
+        transcript: finalMessages.filter(m => m.role !== 'system' as any),
+        grade: fb.overallRating,
+        notes: fb.segmentSpecificNote || '',
+      };
+      await idbSet(STORAGE_KEYS.roleplayDebriefs, [newDebrief, ...existing].slice(0, 50));
+    } catch (e) {
+      console.error('Failed to save debrief to IDB', e);
+    }
+  };
+
   const { vault } = useStoryVaultContext();
   const [loadedStoryId, setLoadedStoryId] = useState<string | null>(null);
   const [showStoryPicker, setShowStoryPicker] = useState(false);
@@ -797,6 +817,7 @@ export default function RoleplaySimulator() {
       if (!selectedPersona) throw new Error('No persona selected');
       const fb = await getCoachFeedback(provider, apiKey, model, messages, selectedPersona);
       setFeedback(fb);
+      await saveDebrief(fb, messages);
     } catch (e) { setError(`Coach feedback failed: ${(e as Error).message}`); }
     finally { setDebriefLoading(false); }
   }, [provider, apiKey, model, messages, selectedPersona]);
