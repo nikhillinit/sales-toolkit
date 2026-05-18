@@ -8,8 +8,8 @@ import BottomNav from '@/components/BottomNav';
 import DraftBanner from '@/components/DraftBanner';
 import Toast from '@/components/Toast';
 import { useUiActions, useUiState, type StepId } from '@/contexts/AppState';
-import { BookOpen, Compass, Search, Zap, type LucideIcon } from 'lucide-react';
-import { lazy, Suspense, useEffect } from 'react';
+import { BookOpen, Compass, Handshake, Search, Zap, type LucideIcon } from 'lucide-react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import Activate from './steps/Activate';
 import FollowUp from './steps/FollowUp';
@@ -17,11 +17,12 @@ import Prepare from './steps/Prepare';
 import Qualify from './steps/Qualify';
 import Report from './steps/Report';
 
-type SecondaryTab = 'os' | 'manual' | 'scanner' | 'lane';
+type SecondaryTab = 'os' | 'manual' | 'scanner' | 'lane' | 'network';
 
 const ClaimScanner = lazy(() => import('./ClaimScanner'));
 const FieldManual = lazy(() => import('./FieldManual'));
 const LaneSelector = lazy(() => import('./LaneSelector'));
+const NetworkTracker = lazy(() => import('./NetworkTracker'));
 
 const STEP_IDS: StepId[] = ['prepare', 'qualify', 'activate', 'followup', 'report'];
 
@@ -30,10 +31,11 @@ const SECONDARY_TABS: { id: SecondaryTab; label: string; Icon: LucideIcon; path:
   { id: 'manual',  label: 'Field Manual', Icon: BookOpen, path: '/manual' },
   { id: 'scanner', label: 'Claim Check',  Icon: Search,   path: '/scanner' },
   { id: 'lane',    label: 'Lane Plan',    Icon: Compass,  path: '/lane' },
+  { id: 'network', label: 'Network Log',  Icon: Handshake, path: '/network' },
 ];
 
 function isSecondaryTab(value: string | undefined): value is SecondaryTab {
-  return value === 'os' || value === 'manual' || value === 'scanner' || value === 'lane';
+  return value === 'os' || value === 'manual' || value === 'scanner' || value === 'lane' || value === 'network';
 }
 
 function isStepId(value: string | undefined): value is StepId {
@@ -169,6 +171,7 @@ function AppShell() {
               <LaneSelector />
             </div>
           )}
+          {activeTab === 'network' && <NetworkTracker />}
         </Suspense>
       </main>
 
@@ -181,21 +184,41 @@ function AppShell() {
   );
 }
 
+function useIsMobileViewport() {
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 768px)').matches);
+
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 768px)');
+    const update = () => setIsMobile(query.matches);
+
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+
+  return isMobile;
+}
+
 export default function Home() {
-  return (
-    <>
-      {/* Mobile: full screen */}
+  const isMobile = useIsMobileViewport();
+
+  if (isMobile) {
+    return (
       <div
         className="mobile-app-wrapper"
         style={{
-          display: 'none',
+          display: 'flex',
           height: '100dvh',
           flexDirection: 'column',
         }}
       >
         <AppShell />
       </div>
+    );
+  }
 
+  return (
+    <>
       {/* Desktop: phone frame */}
       <div
         className="desktop-wrapper"
@@ -294,13 +317,6 @@ export default function Home() {
           </div>
         </div>
       </div>
-
-      <style>{`
-        @media (max-width: 768px) {
-          .mobile-app-wrapper { display: flex !important; }
-          .desktop-wrapper { display: none !important; }
-        }
-      `}</style>
     </>
   );
 }
