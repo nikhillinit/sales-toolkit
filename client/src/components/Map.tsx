@@ -86,7 +86,7 @@ declare global {
   }
 }
 
-const API_KEY = import.meta.env.VITE_FRONTEND_FORGE_API_KEY;
+const API_KEY = import.meta.env.VITE_FRONTEND_FORGE_API_KEY as string | undefined;
 const FORGE_BASE_URL =
   import.meta.env.VITE_FRONTEND_FORGE_API_URL ||
   "https://forge.butterfly-effect.dev";
@@ -126,6 +126,10 @@ export function MapView({
   const map = useRef<google.maps.Map | null>(null);
 
   const init = usePersistFn(async () => {
+    if (!API_KEY) {
+      console.warn("MapView: VITE_FRONTEND_FORGE_API_KEY is not set — map will not load.");
+      return;
+    }
     await loadMapScript();
     if (!mapContainer.current) {
       console.error("Map container not found");
@@ -138,6 +142,9 @@ export function MapView({
       fullscreenControl: true,
       zoomControl: true,
       streetViewControl: true,
+      // DEMO_MAP_ID is intentional for development/preview use.
+      // Replace with a real Map ID from Google Cloud Console before going to production
+      // to enable cloud-based map styling and AdvancedMarkerElement support.
       mapId: "DEMO_MAP_ID",
     });
     if (onMapReady) {
@@ -148,6 +155,21 @@ export function MapView({
   useEffect(() => {
     init();
   }, [init]);
+
+  if (!API_KEY) {
+    return (
+      <div
+        className={cn("w-full h-[500px]", className)}
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "#F4F1EA", border: "2px dashed #C8CCD2", borderRadius: "3px" }}
+      >
+        <div style={{ textAlign: "center", color: "#4A5159", fontFamily: "'JetBrains Mono', monospace", fontSize: "12px" }}>
+          <div style={{ fontSize: "28px", marginBottom: "8px" }}>🗺️</div>
+          <div style={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>Map Unavailable</div>
+          <div style={{ marginTop: "4px", fontSize: "11px" }}>Set VITE_FRONTEND_FORGE_API_KEY to enable the map.</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div ref={mapContainer} className={cn("w-full h-[500px]", className)} />

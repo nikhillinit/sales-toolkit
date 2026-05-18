@@ -881,6 +881,9 @@ export default function RoleplaySimulator() {
                 <input id="api-key" type={showKey ? 'text' : 'password'} value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder={currentProvider.keyHint} style={{ width: '100%', padding: '10px 40px 10px 10px', border: '1px solid #C8CCD2', background: '#FBF8F1', fontFamily: "'JetBrains Mono', monospace", fontSize: '13px', borderRadius: '3px', color: '#1A1D22', boxSizing: 'border-box' }} />
                 <button onClick={() => setShowKey(s => !s)} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', padding: '4px' }}>{showKey ? '🙈' : '👁️'}</button>
               </div>
+              <p style={{ margin: '5px 0 0', fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#4A5159', lineHeight: 1.5 }}>
+                🔒 Session-only — never saved or persisted. Key is cleared when you close or refresh the tab.
+              </p>
             </div>
           </div>
 
