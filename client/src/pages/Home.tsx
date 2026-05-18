@@ -10,6 +10,7 @@ import Toast from '@/components/Toast';
 import { useAppState } from '@/contexts/AppState';
 import { useState } from 'react';
 import ClaimScanner from './ClaimScanner';
+import LaneSelector from './LaneSelector';
 import FieldManual from './FieldManual';
 import Activate from './steps/Activate';
 import FollowUp from './steps/FollowUp';
@@ -17,7 +18,7 @@ import Prepare from './steps/Prepare';
 import Qualify from './steps/Qualify';
 import Report from './steps/Report';
 
-type SecondaryTab = 'os' | 'manual' | 'scanner';
+type SecondaryTab = 'os' | 'manual' | 'scanner' | 'lane';
 
 function AppShell() {
   const { state } = useAppState();
@@ -58,12 +59,16 @@ function AppShell() {
           background: '#fff',
           borderBottom: '1px solid #C8CCD2',
           flexShrink: 0,
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
         }}
       >
         {([
           { id: 'os' as SecondaryTab,      label: 'Sales OS',     icon: '⚡' },
           { id: 'manual' as SecondaryTab,  label: 'Field Manual', icon: '📖' },
           { id: 'scanner' as SecondaryTab, label: 'Claim Check',  icon: '🔍' },
+          { id: 'lane' as SecondaryTab,    label: 'Lane Plan',    icon: '🧭' },
         ] as const).map(tab => (
           <button
             key={tab.id}
@@ -101,13 +106,18 @@ function AppShell() {
           flex: 1,
           overflowY: 'auto',
           overflowX: 'hidden',
-          paddingBottom: secondaryTab === 'os' ? '72px' : '16px',
+          paddingBottom: secondaryTab === 'os' ? '72px' : secondaryTab === 'lane' ? '0' : '16px',
           WebkitOverflowScrolling: 'touch',
         }}
       >
         {secondaryTab === 'os' && renderStep()}
         {secondaryTab === 'manual' && <FieldManual />}
         {secondaryTab === 'scanner' && <ClaimScanner />}
+        {secondaryTab === 'lane' && (
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <LaneSelector />
+          </div>
+        )}
       </main>
 
       {/* Bottom navigation (only for OS tab) */}
