@@ -7,6 +7,8 @@
  * Source Sans 3 body, brick red #A82820 primary, warm paper #F4F1EA background.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { idbGet, idbSet } from '@/lib/storage/idb';
+import { STORAGE_KEYS } from '@/lib/storage/keys';
 import { Copy, Link2, X } from 'lucide-react';
 import { useToastActions } from '@/contexts/AppState';
 import { useStoryVaultContext } from '@/contexts/StoryVaultContext';
@@ -77,7 +79,7 @@ const SUNDAY_QUESTIONS = [
   { key: 'successCondition',  label: '10. What must be true by Friday for this to be a good week', placeholder: 'e.g. 3 activations shipped, 5 follow-ups current, 1 clean exit' },
 ];
 
-const STORAGE_KEY = 'restless_lane_selector_v01';
+// Legacy key kept for migration reference only — IDB is now the source of truth.
 
 const EMPTY_PLAN: SundayPlan = {
   primaryLane: '', activationTarget: '', namedTargets: '',
@@ -98,19 +100,7 @@ function getRing(total: number): Ring {
   return 'red';
 }
 
-function saveToStorage(laneScores: LaneScore[], plan: SundayPlan) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ laneScores, plan }));
-  } catch { /* quota */ }
-}
-
-function loadFromStorage(): { laneScores: LaneScore[]; plan: SundayPlan } | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch { return null; }
-}
+// saveToStorage and loadFromStorage replaced by IDB calls in the component body.
 
 function makeDefaultScores(): LaneScore[] {
   return SEGMENTS.map(segment => ({ segment, scores: [0, 0, 0, 0, 0, 0] as Score[] }));
@@ -233,18 +223,20 @@ export default function LaneSelector() {
   const { vault } = useStoryVaultContext();
   const { toast } = useToastActions();
 
-  // Load from localStorage on mount
+  // Load from IDB on mount
   useEffect(() => {
-    const stored = loadFromStorage();
-    if (stored) {
-      setLaneScores(stored.laneScores.length === SEGMENTS.length ? stored.laneScores : makeDefaultScores());
-      setPlan(stored.plan);
-      // Restore custom segment name if present
-      if (stored.laneScores[3]?.segment !== SEGMENTS[3]) {
-        setCustomSegment(stored.laneScores[3].segment);
-      }
-    }
-    setLoaded(true);
+    idbGet<{ laneScores: LaneScore[]; plan: SundayPlan } | null>(STORAGE_KEYS.laneSelector, null)
+      .then(stored => {
+        if (stored) {
+          setLaneScores(stored.laneScores.length === SEGMENTS.length ? stored.laneScores : makeDefaultScores());
+          setPlan(stored.plan);
+          if (stored.laneScores[3]?.segment !== SEGMENTS[3]) {
+            setCustomSegment(stored.laneScores[3].segment);
+          }
+        }
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
   }, []);
 
   const activeLane = laneScores[activeLaneIdx];
@@ -303,7 +295,7 @@ export default function LaneSelector() {
   const handleSave = useCallback(() => {
     const planWithTimestamp: SundayPlan = { ...plan, savedAt: new Date().toLocaleString() };
     setPlan(planWithTimestamp);
-    saveToStorage(laneScores, planWithTimestamp);
+    idbSet(STORAGE_KEYS.laneSelector, { laneScores, plan: planWithTimestamp }).catch(() => {});
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   }, [laneScores, plan]);
@@ -314,7 +306,7 @@ export default function LaneSelector() {
     setLaneScores(fresh);
     setPlan(EMPTY_PLAN);
     setCustomSegment('');
-    saveToStorage(fresh, EMPTY_PLAN);
+    idbSet(STORAGE_KEYS.laneSelector, { laneScores: fresh, plan: EMPTY_PLAN }).catch(() => {});
   }, []);
 
   const handleCustomSegmentChange = (val: string) => {

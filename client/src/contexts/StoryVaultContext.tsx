@@ -2,83 +2,119 @@
  * StoryVaultContext — shared vault state across Story Card Builder,
  * Roleplay Simulator, and Lane Selector.
  *
- * A Context is required (not just a hook) so sibling consumers stay in sync:
- * mutations in the Builder must immediately appear in Roleplay/Lane pickers.
- *
- * Cross-tab sync: subscribes to the `storage` event so stories saved in another
- * browser tab appear here without a refresh.
+ * Storage: IndexedDB via idb-keyval (fieldkit:v1:storyVault).
+ * Cross-tab sync: BroadcastChannel (replaces legacy storage event).
+ * Hydration: exposes isHydrated and storageError for AppDataGate.
  */
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import {
-  loadVault,
-  makeStoryId,
-  saveVault,
-  STORY_VAULT_STORAGE_KEY,
-  type StoryCard,
-} from '@/lib/storyVault';
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import { broadcastSliceUpdate, FIELDKIT_CHANNEL_NAME, type FieldkitBroadcastEvent } from '@/lib/storage/broadcast';
+import { idbGet, idbUpdate } from '@/lib/storage/idb';
+import { STORAGE_KEYS } from '@/lib/storage/keys';
+import { makeStoryId, type StoryCard } from '@/lib/storyVault';
+import { getTabId } from '@/hooks/useBroadcastSync';
 
-interface StoryVaultContextValue {
+export interface StoryVaultContextValue {
   vault: StoryCard[];
-  addStory: (story: Omit<StoryCard, 'id' | 'timestamp'>) => StoryCard;
-  updateStory: (id: string, updates: Partial<Omit<StoryCard, 'id'>>) => void;
-  deleteStory: (id: string) => void;
+  isHydrated: boolean;
+  storageError: string | null;
+  addStory: (story: Omit<StoryCard, 'id' | 'timestamp'>) => Promise<StoryCard>;
+  updateStory: (id: string, updates: Partial<Omit<StoryCard, 'id'>>) => Promise<void>;
+  deleteStory: (id: string) => Promise<void>;
 }
 
 const StoryVaultContext = createContext<StoryVaultContextValue | undefined>(undefined);
 
 export function StoryVaultProvider({ children }: { children: ReactNode }) {
-  const [vault, setVault] = useState<StoryCard[]>(() => loadVault());
+  const [vault, setVault] = useState<StoryCard[]>([]);
+  const [isHydrated, setHydrated] = useState(false);
+  const [storageError, setStorageError] = useState<string | null>(null);
+  const channelRef = useRef<BroadcastChannel | null>(null);
 
+  // Hydrate from IDB on mount
   useEffect(() => {
-    const sync = (e: StorageEvent) => {
-      if (e.key !== STORY_VAULT_STORAGE_KEY) return;
-      if (!e.newValue) {
-        setVault([]);
-        return;
-      }
-      try {
-        const parsed = JSON.parse(e.newValue);
-        if (Array.isArray(parsed)) setVault(parsed);
-      } catch {
-        // Ignore malformed cross-tab payloads.
-      }
-    };
-    window.addEventListener('storage', sync);
-    return () => window.removeEventListener('storage', sync);
+    idbGet<StoryCard[]>(STORAGE_KEYS.storyVault, [])
+      .then(stored => {
+        setVault(stored);
+        setHydrated(true);
+      })
+      .catch(err => {
+        setStorageError(String(err));
+        setHydrated(true);
+      });
   }, []);
 
-  const addStory = useCallback<StoryVaultContextValue['addStory']>(story => {
+  // BroadcastChannel cross-tab sync
+  useEffect(() => {
+    const channel = new BroadcastChannel(FIELDKIT_CHANNEL_NAME);
+    channelRef.current = channel;
+
+    const handler = (msg: MessageEvent<FieldkitBroadcastEvent>) => {
+      const event = msg.data;
+      if (event.tabId === getTabId()) return;
+      if (
+        event.type === 'slice-updated' && event.slice === 'storyVault' ||
+        event.type === 'data-imported' ||
+        event.type === 'data-cleared'
+      ) {
+        idbGet<StoryCard[]>(STORAGE_KEYS.storyVault, []).then(setVault).catch(() => {});
+      }
+    };
+
+    channel.addEventListener('message', handler);
+    return () => {
+      channel.removeEventListener('message', handler);
+      channel.close();
+      channelRef.current = null;
+    };
+  }, []);
+
+  const addStory = useCallback(async (story: Omit<StoryCard, 'id' | 'timestamp'>): Promise<StoryCard> => {
     const newStory: StoryCard = {
       ...story,
       id: makeStoryId(),
       timestamp: Date.now(),
     };
-    setVault(prev => {
-      const next = [newStory, ...prev];
-      saveVault(next);
-      return next;
-    });
+    await idbUpdate<StoryCard[]>(STORAGE_KEYS.storyVault, existing => [
+      newStory,
+      ...(existing ?? []),
+    ]);
+    setVault(prev => [newStory, ...prev]);
+    if (channelRef.current) {
+      await broadcastSliceUpdate(channelRef.current, 'storyVault', getTabId());
+    }
     return newStory;
   }, []);
 
-  const updateStory = useCallback<StoryVaultContextValue['updateStory']>((id, updates) => {
-    setVault(prev => {
-      const next = prev.map(s => (s.id === id ? { ...s, ...updates, id: s.id } : s));
-      saveVault(next);
-      return next;
-    });
+  const updateStory = useCallback(async (id: string, updates: Partial<Omit<StoryCard, 'id'>>): Promise<void> => {
+    await idbUpdate<StoryCard[]>(STORAGE_KEYS.storyVault, existing =>
+      (existing ?? []).map(s => (s.id === id ? { ...s, ...updates, id: s.id } : s)),
+    );
+    setVault(prev => prev.map(s => (s.id === id ? { ...s, ...updates, id: s.id } : s)));
+    if (channelRef.current) {
+      await broadcastSliceUpdate(channelRef.current, 'storyVault', getTabId());
+    }
   }, []);
 
-  const deleteStory = useCallback<StoryVaultContextValue['deleteStory']>(id => {
-    setVault(prev => {
-      const next = prev.filter(s => s.id !== id);
-      saveVault(next);
-      return next;
-    });
+  const deleteStory = useCallback(async (id: string): Promise<void> => {
+    await idbUpdate<StoryCard[]>(STORAGE_KEYS.storyVault, existing =>
+      (existing ?? []).filter(s => s.id !== id),
+    );
+    setVault(prev => prev.filter(s => s.id !== id));
+    if (channelRef.current) {
+      await broadcastSliceUpdate(channelRef.current, 'storyVault', getTabId());
+    }
   }, []);
 
   return (
-    <StoryVaultContext.Provider value={{ vault, addStory, updateStory, deleteStory }}>
+    <StoryVaultContext.Provider value={{ vault, isHydrated, storageError, addStory, updateStory, deleteStory }}>
       {children}
     </StoryVaultContext.Provider>
   );

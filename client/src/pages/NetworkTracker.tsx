@@ -3,30 +3,14 @@ import { Trash2 } from 'lucide-react';
 import { useToastActions } from '@/contexts/AppState';
 import {
   NETWORK_GEARS,
-  NETWORK_LOG_STORAGE_KEY,
   getCurrentWeekLogs,
   getNetworkCounts,
   makeNetworkLogId,
-  parseNetworkLogs,
   type NetworkGearId,
   type NetworkLog,
 } from '@/lib/networkDiscipline';
-
-function saveLogs(logs: NetworkLog[]) {
-  try {
-    localStorage.setItem(NETWORK_LOG_STORAGE_KEY, JSON.stringify(logs));
-  } catch {
-    // In-memory state still updates if storage is unavailable.
-  }
-}
-
-function loadLogs(): NetworkLog[] {
-  try {
-    return parseNetworkLogs(localStorage.getItem(NETWORK_LOG_STORAGE_KEY));
-  } catch {
-    return [];
-  }
-}
+import { idbGet, idbUpdate } from '@/lib/storage/idb';
+import { STORAGE_KEYS } from '@/lib/storage/keys';
 
 export default function NetworkTracker() {
   const { toast } = useToastActions();
@@ -37,7 +21,9 @@ export default function NetworkTracker() {
   const [community, setCommunity] = useState('');
 
   useEffect(() => {
-    setLogs(loadLogs());
+    idbGet<NetworkLog[]>(STORAGE_KEYS.networkLogs, [])
+      .then(stored => setLogs(stored))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -68,28 +54,24 @@ export default function NetworkTracker() {
       return;
     }
 
-    const nextLogs: NetworkLog[] = [
-      ...logs,
-      {
-        id: makeNetworkLogId(),
-        gear,
-        contactName: trimmedName,
-        community: trimmedCommunity,
-        createdAt: new Date().toISOString(),
-      },
-    ];
+    const newEntry: NetworkLog = {
+      id: makeNetworkLogId(),
+      gear,
+      contactName: trimmedName,
+      community: trimmedCommunity,
+      createdAt: new Date().toISOString(),
+    };
 
-    setLogs(nextLogs);
-    saveLogs(nextLogs);
+    idbUpdate<NetworkLog[]>(STORAGE_KEYS.networkLogs, existing => [...(existing ?? []), newEntry]).catch(() => {});
+    setLogs(prev => [...prev, newEntry]);
     setContactName('');
     setCommunity('');
     toast('Network contact logged.');
   };
 
   const removeLog = (id: string) => {
-    const nextLogs = logs.filter(log => log.id !== id);
-    setLogs(nextLogs);
-    saveLogs(nextLogs);
+    idbUpdate<NetworkLog[]>(STORAGE_KEYS.networkLogs, existing => (existing ?? []).filter(l => l.id !== id)).catch(() => {});
+    setLogs(prev => prev.filter(log => log.id !== id));
     toast('Network contact removed.');
   };
 

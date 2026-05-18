@@ -95,16 +95,16 @@ export default function StoryCardBuilder() {
     setForm(BLANK_FORM);
   }, []);
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!canSave) {
       toast('Title and Character are required.');
       return;
     }
     if (editingStory) {
-      updateStory(editingStory.id, { ...form, timestamp: Date.now() });
+      await updateStory(editingStory.id, { ...form, timestamp: Date.now() });
       toast('Story updated.');
     } else {
-      addStory(form);
+      await addStory(form);
       toast('Story saved to vault.');
     }
     setEditingStory(null);
@@ -117,9 +117,9 @@ export default function StoryCardBuilder() {
     setActiveTab('build');
   }, []);
 
-  const handleDelete = useCallback((id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     if (typeof window === 'undefined' || !window.confirm('Delete this story permanently?')) return;
-    deleteStory(id);
+    await deleteStory(id);
     if (editingStory?.id === id) setEditingStory(null);
     toast('Story deleted.');
   }, [deleteStory, editingStory, toast]);
