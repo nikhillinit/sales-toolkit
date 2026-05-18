@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
+import { VitePWA } from "vite-plugin-pwa";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 
 // =============================================================================
@@ -203,7 +204,78 @@ function vitePluginStorageProxy(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), vitePluginStorageProxy()];
+const pwaPlugin = VitePWA({
+  registerType: 'autoUpdate',
+  injectRegister: 'script-defer',
+  includeAssets: ['icons/icon-180x180.png', 'icons/icon-32x32.png', 'icons/icon-16x16.png'],
+  manifest: {
+    name: 'Restless FieldKit',
+    short_name: 'FieldKit',
+    description: 'Unified Signal OS — field sales toolkit for Restless reps.',
+    theme_color: '#A82820',
+    background_color: '#F4F1EA',
+    display: 'standalone',
+    orientation: 'portrait',
+    start_url: '/os/prepare',
+    scope: '/',
+    icons: [
+      {
+        src: '/icons/icon-192x192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icons/icon-192x192-maskable.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+      {
+        src: '/icons/icon-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icons/icon-512x512-maskable.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+    ],
+  },
+  workbox: {
+    globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+    // Do not cache Manus dev/debug endpoints or analytics
+    navigateFallbackDenylist: [/^\/__manus__/, /^\/manus-storage/, /^\/_/],
+    runtimeCaching: [
+      {
+        urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'google-fonts-cache',
+          expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+          cacheableResponse: { statuses: [0, 200] },
+        },
+      },
+      {
+        urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'gstatic-fonts-cache',
+          expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+          cacheableResponse: { statuses: [0, 200] },
+        },
+      },
+    ],
+  },
+  devOptions: {
+    enabled: false,
+  },
+});
+
+const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), vitePluginStorageProxy(), pwaPlugin];
 
 export default defineConfig({
   plugins,

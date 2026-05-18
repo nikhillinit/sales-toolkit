@@ -10,6 +10,7 @@
  */
 import { useWizard, Wizard } from 'react-use-wizard';
 import { useTrialsState } from '@/contexts/AppState';
+import { downloadIcs, trialsToIcsEvents } from '@/lib/icsExport';
 import { useState } from 'react';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -311,15 +312,32 @@ export default function WeeklyCadencePlanner() {
     }
   };
 
+  const handleExportIcs = () => {
+    const shippedTrials = trials.filter(t => t.status === 'shipped');
+    const events = trialsToIcsEvents(shippedTrials);
+    if (events.length === 0) return;
+    downloadIcs(events, `fieldkit-followups-${new Date().toISOString().slice(0, 10)}.ics`);
+  };
+
   if (done) {
     return (
       <div style={{ padding: '32px 16px', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
         <div style={{ fontSize: '48px', marginBottom: '12px' }}>✅</div>
         <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '24px', fontWeight: 700, textTransform: 'uppercase', color: '#2E7D32', marginBottom: '8px' }}>Plan Copied</div>
         <p style={{ fontSize: '14px', color: '#4A5159', marginBottom: '20px' }}>Your weekly cadence plan is in your clipboard. Paste it into your notes or manager message.</p>
-        <button onClick={() => setDone(false)} style={{ padding: '12px 24px', background: '#1A1D22', color: '#F4F1EA', border: '2px solid #1A1D22', borderRadius: '3px', fontFamily: "'Barlow Condensed', sans-serif", fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', cursor: 'pointer', boxShadow: '3px 3px 0px #A82820' }}>
-          ↺ Build New Plan
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
+          {trials.filter(t => t.status === 'shipped').length > 0 && (
+            <button
+              onClick={handleExportIcs}
+              style={{ padding: '12px 24px', background: '#1565C0', color: '#fff', border: '2px solid #1565C0', borderRadius: '3px', fontFamily: "'Barlow Condensed', sans-serif", fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', cursor: 'pointer', boxShadow: '3px 3px 0px #0D47A1' }}
+            >
+              📅 Export Follow-Ups to Calendar (.ics)
+            </button>
+          )}
+          <button onClick={() => setDone(false)} style={{ padding: '12px 24px', background: '#1A1D22', color: '#F4F1EA', border: '2px solid #1A1D22', borderRadius: '3px', fontFamily: "'Barlow Condensed', sans-serif", fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', cursor: 'pointer', boxShadow: '3px 3px 0px #A82820' }}>
+            ↺ Build New Plan
+          </button>
+        </div>
       </div>
     );
   }
