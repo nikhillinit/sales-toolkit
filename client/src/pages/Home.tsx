@@ -8,7 +8,7 @@ import BottomNav from '@/components/BottomNav';
 import DraftBanner from '@/components/DraftBanner';
 import Toast from '@/components/Toast';
 import { useUiActions, useUiState, type StepId } from '@/contexts/AppState';
-import { BookOpen, Compass, Handshake, Search, Zap, type LucideIcon } from 'lucide-react';
+import { BookOpen, Compass, Handshake, MessageSquare, Search, Zap, type LucideIcon } from 'lucide-react';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import Activate from './steps/Activate';
@@ -17,12 +17,13 @@ import Prepare from './steps/Prepare';
 import Qualify from './steps/Qualify';
 import Report from './steps/Report';
 
-type SecondaryTab = 'os' | 'manual' | 'scanner' | 'lane' | 'network';
+type SecondaryTab = 'os' | 'manual' | 'scanner' | 'lane' | 'network' | 'roleplay';
 
 const ClaimScanner = lazy(() => import('./ClaimScanner'));
 const FieldManual = lazy(() => import('./FieldManual'));
 const LaneSelector = lazy(() => import('./LaneSelector'));
 const NetworkTracker = lazy(() => import('./NetworkTracker'));
+const RoleplaySimulator = lazy(() => import('./RoleplaySimulator'));
 
 const STEP_IDS: StepId[] = ['prepare', 'qualify', 'activate', 'followup', 'report'];
 
@@ -31,11 +32,12 @@ const SECONDARY_TABS: { id: SecondaryTab; label: string; Icon: LucideIcon; path:
   { id: 'manual',  label: 'Field Manual', Icon: BookOpen, path: '/manual' },
   { id: 'scanner', label: 'Claim Check',  Icon: Search,   path: '/scanner' },
   { id: 'lane',    label: 'Lane Plan',    Icon: Compass,  path: '/lane' },
-  { id: 'network', label: 'Network Log',  Icon: Handshake, path: '/network' },
+  { id: 'network',  label: 'Network Log', Icon: Handshake, path: '/network' },
+  { id: 'roleplay', label: 'Roleplay',     Icon: MessageSquare, path: '/roleplay' },
 ];
 
 function isSecondaryTab(value: string | undefined): value is SecondaryTab {
-  return value === 'os' || value === 'manual' || value === 'scanner' || value === 'lane' || value === 'network';
+  return value === 'os' || value === 'manual' || value === 'scanner' || value === 'lane' || value === 'network' || value === 'roleplay';
 }
 
 function isStepId(value: string | undefined): value is StepId {
@@ -158,7 +160,7 @@ function AppShell() {
           flex: 1,
           overflowY: 'auto',
           overflowX: 'hidden',
-          paddingBottom: activeTab === 'os' ? '72px' : activeTab === 'lane' ? '0' : '16px',
+          paddingBottom: activeTab === 'os' ? '72px' : (activeTab === 'lane' || activeTab === 'roleplay') ? '0' : '16px',
           WebkitOverflowScrolling: 'touch',
         }}
       >
@@ -172,6 +174,11 @@ function AppShell() {
             </div>
           )}
           {activeTab === 'network' && <NetworkTracker />}
+          {activeTab === 'roleplay' && (
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <RoleplaySimulator />
+            </div>
+          )}
         </Suspense>
       </main>
 
