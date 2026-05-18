@@ -3,52 +3,23 @@
  *
  * Design: Unified Signal OS — Barlow Condensed, JetBrains Mono, brick red #A82820.
  */
-import { useRef, useState } from 'react';
-import { Download, Upload, Trash2, ShieldCheck, AlertTriangle } from 'lucide-react';
-import { idbGet, idbSet } from '@/lib/storage/idb';
+import { useEffect, useRef, useState } from 'react';
+import { Download, HardDrive, ShieldCheck, AlertTriangle, Trash2, Upload } from 'lucide-react';
+import { idbSet } from '@/lib/storage/idb';
 import { STORAGE_KEYS } from '@/lib/storage/keys';
-import { parseExport, EXPORT_SCHEMA_VERSION, type FieldKitExport } from '@/lib/exportSchema';
+import { parseExport } from '@/lib/exportSchema';
 import { useToastActions } from '@/contexts/AppState';
+import { exportAllData } from '@/lib/storage/exportData';
+import { requestPersistentStorage, getStorageEstimate } from '@/lib/storage/persistentStorage';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-async function gatherExportData(): Promise<FieldKitExport> {
-  const [storyVault, trials, stats, laneSelector, repCaptures, uiProgress, roleplayDebriefs] =
-    await Promise.all([
-      idbGet(STORAGE_KEYS.storyVault, []),
-      idbGet(STORAGE_KEYS.trials, []),
-      idbGet(STORAGE_KEYS.stats, {}),
-      idbGet(STORAGE_KEYS.laneSelector, null),
-      idbGet(STORAGE_KEYS.repCaptures, []),
-      idbGet(STORAGE_KEYS.uiProgress, {}),
-      idbGet(STORAGE_KEYS.roleplayDebriefs, []),
-    ]);
-
-  return {
-    schemaVersion: EXPORT_SCHEMA_VERSION as 1,
-    exportedAt: new Date().toISOString(),
-    appVersion: '2.0.0',
-    data: {
-      storyVault: storyVault as FieldKitExport['data']['storyVault'],
-      trials: trials as FieldKitExport['data']['trials'],
-      stats: stats as FieldKitExport['data']['stats'],
-      laneSelector: laneSelector as FieldKitExport['data']['laneSelector'],
-      repCaptures: repCaptures as FieldKitExport['data']['repCaptures'],
-      networkLogs: [] as FieldKitExport['data']['networkLogs'],
-      uiProgress: uiProgress as FieldKitExport['data']['uiProgress'],
-      roleplayDebriefs: roleplayDebriefs as FieldKitExport['data']['roleplayDebriefs'],
-    },
-  };
-}
-
-function downloadJson(data: unknown, filename: string) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
+function formatBytes(bytes: number | null): string {
+  if (bytes === null) return '—';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -58,29 +29,44 @@ export default function Settings() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [clearing, setClearing] = useState(false);
-  const [storageGranted, setStorageGranted] = useState<boolean | null>(null);
+  const [persisted, setPersisted] = useState<boolean | null>(null);
+  const [requesting, setRequesting] = useState(false);
+  const [quota, setQuota] = useState<{ quota: number | null; usage: number | null; percentUsed: number | null } | null>(null);
 
-  // Check persistent storage status
-  const checkStorage = async () => {
-    if (!navigator.storage?.persisted) {
-      setStorageGranted(false);
-      return;
+  useEffect(() => {
+    async function checkStatus() {
+      if (navigator.storage?.persisted) {
+        const p = await navigator.storage.persisted();
+        setPersisted(p);
+      } else {
+        setPersisted(false);
+      }
+      const estimate = await getStorageEstimate();
+      setQuota(estimate);
     }
-    const persisted = await navigator.storage.persisted();
-    if (persisted) {
-      setStorageGranted(true);
-      return;
+    void checkStatus();
+  }, []);
+
+  const handleRequestPersist = async () => {
+    setRequesting(true);
+    try {
+      const result = await requestPersistentStorage();
+      setPersisted(result.persisted);
+      if (!result.supported) {
+        toast('Persistent storage is not supported on this device.');
+      } else if (result.persisted) {
+        toast('Persistent storage granted — your data is protected.');
+      } else {
+        toast('Persistent storage not granted. Export backups regularly.');
+      }
+    } finally {
+      setRequesting(false);
     }
-    const granted = await navigator.storage.persist();
-    setStorageGranted(granted);
-    toast(granted ? 'Persistent storage granted.' : 'Persistent storage not available on this device.');
   };
 
   const handleExport = async () => {
     try {
-      const data = await gatherExportData();
-      const date = new Date().toISOString().slice(0, 10);
-      downloadJson(data, `fieldkit-backup-${date}.json`);
+      await exportAllData();
       toast('Data exported.');
     } catch {
       toast('Export failed. Try again.');
@@ -141,7 +127,7 @@ export default function Settings() {
     marginBottom: '12px',
   };
 
-  const btnStyle = (color: string): React.CSSProperties => ({
+  const btnStyle = (color: string, disabled = false): React.CSSProperties => ({
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
@@ -155,12 +141,19 @@ export default function Settings() {
     fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: '0.06em',
-    cursor: 'pointer',
+    cursor: disabled ? 'default' : 'pointer',
     width: '100%',
     justifyContent: 'center',
     marginBottom: '8px',
     WebkitTapHighlightColor: 'transparent',
+    opacity: disabled ? 0.55 : 1,
   });
+
+  const mono: React.CSSProperties = {
+    fontFamily: "'JetBrains Mono', monospace",
+    fontWeight: 700,
+    letterSpacing: '0.05em',
+  };
 
   return (
     <div style={{ padding: '16px', maxWidth: '600px', margin: '0 auto', width: '100%' }}>
@@ -172,7 +165,7 @@ export default function Settings() {
         <div className="os-h2" style={{ marginTop: 0 }}>Export Backup</div>
         <p style={{ fontSize: '13px', color: '#4A5159', marginBottom: '12px' }}>
           Downloads a <code>.json</code> file with all your FieldKit data — stories, trials, stats,
-          lane plans, network logs, and roleplay debriefs.
+          lane plans, rep captures, and roleplay debriefs.
         </p>
         <button style={btnStyle('#2E7D32')} onClick={handleExport}>
           <Download size={14} aria-hidden="true" />
@@ -188,7 +181,7 @@ export default function Settings() {
           overwritten. The file is validated before any writes.
         </p>
         <button
-          style={btnStyle('#1565C0')}
+          style={btnStyle('#1565C0', importing)}
           onClick={() => fileInputRef.current?.click()}
           disabled={importing}
         >
@@ -208,34 +201,78 @@ export default function Settings() {
       <div style={panelStyle}>
         <div className="os-h2" style={{ marginTop: 0 }}>Persistent Storage</div>
         <p style={{ fontSize: '13px', color: '#4A5159', marginBottom: '12px' }}>
-          Request persistent storage to prevent the browser from evicting your data under
-          storage pressure. Recommended for daily use.
+          Without persistent storage, the browser can silently delete your data under storage
+          pressure — or on iOS Safari after 7 days of inactivity. Granting this prevents eviction.
         </p>
-        {storageGranted !== null && (
+
+        {/* Status badge */}
+        {persisted !== null && (
           <div style={{
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
             padding: '8px 12px',
-            background: storageGranted ? '#E8F5E9' : '#FFF8E1',
-            border: `1.5px solid ${storageGranted ? '#2E7D32' : '#B45309'}`,
+            background: persisted ? '#E8F5E9' : '#FFF8E1',
+            border: `1.5px solid ${persisted ? '#2E7D32' : '#B45309'}`,
             borderRadius: '3px',
             marginBottom: '8px',
-            fontFamily: "'JetBrains Mono', monospace",
+            ...mono,
             fontSize: '10px',
-            fontWeight: 700,
-            color: storageGranted ? '#2E7D32' : '#B45309',
+            color: persisted ? '#2E7D32' : '#B45309',
           }}>
-            {storageGranted
-              ? <><ShieldCheck size={14} aria-hidden="true" /> PERSISTENT STORAGE ACTIVE</>
-              : <><AlertTriangle size={14} aria-hidden="true" /> NOT GRANTED — DATA MAY BE EVICTED</>
+            {persisted
+              ? <><ShieldCheck size={13} aria-hidden="true" /> PERSISTENT STORAGE ACTIVE — DATA IS PROTECTED</>
+              : <><AlertTriangle size={13} aria-hidden="true" /> NOT GRANTED — DATA MAY BE EVICTED BY BROWSER</>
             }
           </div>
         )}
-        <button style={btnStyle('#4A5159')} onClick={checkStorage}>
-          <ShieldCheck size={14} aria-hidden="true" />
-          {storageGranted === null ? 'Check / Request Persistent Storage' : 'Re-check Storage Status'}
-        </button>
+
+        {/* Storage quota */}
+        {quota && (quota.quota !== null || quota.usage !== null) && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 12px',
+            background: '#F4F1EA',
+            border: '1px solid #C8CCD2',
+            borderRadius: '3px',
+            marginBottom: '8px',
+            ...mono,
+            fontSize: '10px',
+            color: '#4A5159',
+          }}>
+            <HardDrive size={13} aria-hidden="true" />
+            <span>
+              STORAGE:{' '}
+              <span style={{ color: '#1A1D22' }}>{formatBytes(quota.usage)}</span>
+              {quota.quota !== null && (
+                <> used of <span style={{ color: '#1A1D22' }}>{formatBytes(quota.quota)}</span></>
+              )}
+              {quota.percentUsed !== null && (
+                <> &mdash; <span style={{ color: quota.percentUsed > 80 ? '#A82820' : '#1A1D22' }}>{quota.percentUsed}%</span></>
+              )}
+            </span>
+          </div>
+        )}
+
+        {/* Request button — only shown when not already persisted */}
+        {persisted === false && (
+          <button
+            style={btnStyle('#4A5159', requesting)}
+            onClick={handleRequestPersist}
+            disabled={requesting}
+          >
+            <ShieldCheck size={14} aria-hidden="true" />
+            {requesting ? 'Requesting…' : 'Request Persistent Storage'}
+          </button>
+        )}
+
+        {persisted === null && (
+          <p style={{ fontSize: '11px', color: '#4A5159', ...mono, margin: 0 }}>
+            Checking storage status…
+          </p>
+        )}
       </div>
 
       {/* Clear all */}
@@ -244,7 +281,7 @@ export default function Settings() {
         <p style={{ fontSize: '13px', color: '#4A5159', marginBottom: '12px' }}>
           Permanently delete all FieldKit data from this device. Export a backup first.
         </p>
-        <button style={btnStyle('#A82820')} onClick={handleClearAll} disabled={clearing}>
+        <button style={btnStyle('#A82820', clearing)} onClick={handleClearAll} disabled={clearing}>
           <Trash2 size={14} aria-hidden="true" />
           {clearing ? 'Clearing…' : 'Clear All Data'}
         </button>

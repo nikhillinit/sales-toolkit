@@ -7,6 +7,7 @@ import AppHeader from '@/components/AppHeader';
 import BottomNav from '@/components/BottomNav';
 import { DesktopShell } from '@/components/DesktopShell';
 import DraftBanner from '@/components/DraftBanner';
+import StorageWarningBanner from '@/components/StorageWarningBanner';
 import Toast from '@/components/Toast';
 import { useUiActions, useUiState, type StepId } from '@/contexts/AppState';
 import { BookOpen, CalendarDays, Compass, Handshake, Library, MessageSquare, Search, Settings2, Zap, type LucideIcon } from 'lucide-react';
@@ -112,6 +113,9 @@ function AppShell() {
 
       {/* Draft banner */}
       <DraftBanner />
+
+      {/* Storage persistence warning (boot-time check) */}
+      <StorageWarningBanner />
 
       {/* Secondary tab bar */}
       <div
