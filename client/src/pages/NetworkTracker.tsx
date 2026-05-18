@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { useToastActions } from '@/contexts/AppState';
 import {
@@ -11,6 +11,7 @@ import {
 } from '@/lib/networkDiscipline';
 import { idbGet, idbUpdate } from '@/lib/storage/idb';
 import { STORAGE_KEYS } from '@/lib/storage/keys';
+import { MapView } from '@/components/Map';
 
 export default function NetworkTracker() {
   const { toast } = useToastActions();
@@ -19,6 +20,9 @@ export default function NetworkTracker() {
   const [gear, setGear] = useState<NetworkGearId>(NETWORK_GEARS[0].id);
   const [contactName, setContactName] = useState('');
   const [community, setCommunity] = useState('');
+
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
 
   useEffect(() => {
     idbGet<NetworkLog[]>(STORAGE_KEYS.networkLogs, [])
@@ -44,6 +48,49 @@ export default function NetworkTracker() {
   const counts = useMemo(() => getNetworkCounts(weekLogs), [weekLogs]);
   const totalLogged = weekLogs.length;
   const totalTarget = NETWORK_GEARS.reduce((sum, item) => sum + item.target, 0);
+
+  const placeMarkers = useCallback((map: google.maps.Map, logsToPin: NetworkLog[]) => {
+    markersRef.current.forEach(m => { m.map = null; });
+    markersRef.current = [];
+
+    if (!window.google) return;
+
+    const geocoder = new window.google.maps.Geocoder();
+    const bounds = new window.google.maps.LatLngBounds();
+    let geocodedCount = 0;
+
+    logsToPin.forEach(log => {
+      geocoder.geocode({ address: log.community }, (results, status) => {
+        if (status !== 'OK' || !results || results.length === 0) return;
+        const position = results[0].geometry.location;
+        const marker = new window.google!.maps.marker.AdvancedMarkerElement({
+          map,
+          position,
+          title: `${log.contactName} — ${log.community}`,
+        });
+        markersRef.current.push(marker);
+        bounds.extend(position);
+        geocodedCount++;
+        if (geocodedCount === 1) {
+          map.setCenter(position);
+        }
+        if (geocodedCount > 1) {
+          map.fitBounds(bounds);
+        }
+      });
+    });
+  }, []);
+
+  const handleMapReady = useCallback((map: google.maps.Map) => {
+    mapRef.current = map;
+    placeMarkers(map, weekLogs);
+  }, [weekLogs, placeMarkers]);
+
+  useEffect(() => {
+    if (mapRef.current) {
+      placeMarkers(mapRef.current, weekLogs);
+    }
+  }, [weekLogs, placeMarkers]);
 
   const addLog = () => {
     const trimmedName = contactName.trim();
@@ -139,6 +186,30 @@ export default function NetworkTracker() {
             );
           })}
         </div>
+      </div>
+
+      <div className="os-panel" style={{ marginBottom: '12px' }}>
+        <div className="os-h2" style={{ marginTop: 0 }}>
+          Territory Map
+        </div>
+        <MapView
+          initialCenter={{ lat: 37.7749, lng: -122.4194 }}
+          initialZoom={10}
+          onMapReady={handleMapReady}
+          className="rounded"
+        />
+        {weekLogs.length > 0 && (
+          <div
+            style={{
+              marginTop: '6px',
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: '11px',
+              color: '#4A5159',
+            }}
+          >
+            Pins placed for contacts with geocodable locations.
+          </div>
+        )}
       </div>
 
       <div className="os-panel" style={{ marginBottom: '12px' }}>
