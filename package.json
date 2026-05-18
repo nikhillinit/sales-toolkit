@@ -12,7 +12,9 @@
     "format": "prettier --write .",
     "build:manual": "node scripts/build-manual.mjs",
     "prebuild": "node scripts/build-manual.mjs",
-    "predev": "node scripts/build-manual.mjs"
+    "predev": "node scripts/build-manual.mjs",
+    "build:offline": "node scripts/build-offline-delivery.mjs",
+    "build:manual:all": "node scripts/build-manual.mjs && node scripts/build-offline-delivery.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
