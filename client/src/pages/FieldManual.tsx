@@ -1,12 +1,18 @@
 /**
  * Field Manual — Unified Signal OS
- * Iframe-based view of the v4.2 field manual HTML with:
- * - Left-side TOC that deep-links via postMessage scroll bridge
- * - URL-driven deep-linking: /manual/p19 scrolls to page p19 on load
- * - Searchable page list
+ *
+ * Bidirectional iframe bridge:
+ *   Outbound  → app sends  { type: 'scrollToPage', pageId }  to iframe
+ *   Inbound   ← iframe sends { type: 'pageVisible', pageId }  → updates TOC + URL
+ *   Inbound   ← iframe sends { type: 'appRoute', route, context } → navigate app
+ *
+ * Review fixes applied:
+ *   - useRoute('/manual/:pageId') without optional '?' (wouter 3.x)
+ *   - iframeReady ref gates outbound postMessage so cold loads work
+ *   - navigate stabilised via useRef to avoid stale-closure in listener
  */
-import { useEffect, useRef, useState } from 'react';
-import { useRoute } from 'wouter';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation, useRoute } from 'wouter';
 
 const MANUAL_PAGES = [
   { id: 'p02', label: 'Overview · 15 Tools' },
@@ -40,43 +46,94 @@ const MANUAL_PAGES = [
   { id: 'p30', label: 'Quick Reference & Close' },
 ] as const;
 
+function isPageId(s: string): boolean {
+  return MANUAL_PAGES.some(p => p.id === s);
+}
+
 export default function FieldManual() {
+  // App.tsx registers both /manual and /manual/:pageId — no optional '?' needed
   const [, params] = useRoute<{ pageId?: string }>('/manual/:pageId');
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [iframeReady, setIframeReady] = useState(false);
+  const [, setLocation] = useLocation();
+
+  const iframeRef   = useRef<HTMLIFrameElement>(null);
+  // Ref (not state) so the outbound gate doesn't trigger an extra render
+  const iframeReady = useRef(false);
+  // Stable ref so the inbound listener never captures a stale setLocation
+  const setLocationRef = useRef(setLocation);
+  useEffect(() => { setLocationRef.current = setLocation; }, [setLocation]);
+
   const [activePageId, setActivePageId] = useState<string>(params?.pageId ?? 'p02');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery,  setSearchQuery]  = useState('');
+  // Track loading overlay with state so it re-renders when ready
+  const [loadingVisible, setLoadingVisible] = useState(true);
 
-  useEffect(() => {
-    if (params?.pageId) setActivePageId(params.pageId);
-  }, [params?.pageId]);
-
-  useEffect(() => {
-    if (!iframeReady || !activePageId) return;
-    iframeRef.current?.contentWindow?.postMessage(
-      { type: 'scrollToPage', pageId: activePageId },
-      window.location.origin
-    );
-  }, [iframeReady, activePageId]);
-
-  const scrollToPage = (pageId: string) => {
-    setActivePageId(pageId);
-    iframeRef.current?.contentWindow?.postMessage(
+  // ── Outbound helper ────────────────────────────────────────────────────────
+  const sendScroll = useCallback((pageId: string) => {
+    if (!iframeReady.current || !iframeRef.current?.contentWindow) return;
+    iframeRef.current.contentWindow.postMessage(
       { type: 'scrollToPage', pageId },
-      window.location.origin
+      window.location.origin,
     );
-  };
+  }, []);
+
+  // Sync active page when URL-driven pageId changes
+  useEffect(() => {
+    if (params?.pageId && isPageId(params.pageId)) {
+      setActivePageId(params.pageId);
+      sendScroll(params.pageId);
+    }
+  }, [params?.pageId, sendScroll]);
+
+  // On iframe load: mark ready, dismiss overlay, scroll to initial page
+  const handleLoad = useCallback(() => {
+    iframeReady.current = true;
+    setLoadingVisible(false);
+    sendScroll(activePageId);
+  }, [activePageId, sendScroll]);
+
+  // ── Inbound listener ───────────────────────────────────────────────────────
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
+      const data = e.data as {
+        type?: string;
+        pageId?: string;
+        route?: string;
+        context?: unknown;
+      };
+
+      if (data?.type === 'pageVisible' && typeof data.pageId === 'string') {
+        // Iframe reports which page is most visible → sync TOC + URL silently
+        setActivePageId(data.pageId);
+        // replace: true so the browser back button skips per-page entries
+        setLocationRef.current(`/manual/${data.pageId}`, { replace: true } as never);
+      } else if (data?.type === 'appRoute' && typeof data.route === 'string') {
+        // CTA click inside the iframe → navigate the app
+        setLocationRef.current(data.route, { state: data.context ?? undefined } as never);
+      }
+    };
+
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []); // stable — navigate via ref, no deps needed
+
+  // ── TOC click ──────────────────────────────────────────────────────────────
+  const jumpToPage = useCallback((pageId: string) => {
+    setActivePageId(pageId);
+    setLocationRef.current(`/manual/${pageId}`);
+    sendScroll(pageId);
+  }, [sendScroll]);
 
   const filteredPages = searchQuery.trim()
     ? MANUAL_PAGES.filter(p =>
         p.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.id.includes(searchQuery.toLowerCase())
+        p.id.includes(searchQuery.toLowerCase()),
       )
     : MANUAL_PAGES;
 
   return (
     <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
-      {/* TOC sidebar */}
+      {/* ── TOC sidebar ─────────────────────────────────────────────────── */}
       <div
         style={{
           width: '160px',
@@ -114,7 +171,7 @@ export default function FieldManual() {
             return (
               <button
                 key={page.id}
-                onClick={() => scrollToPage(page.id)}
+                onClick={() => jumpToPage(page.id)}
                 style={{
                   display: 'block',
                   width: '100%',
@@ -138,16 +195,21 @@ export default function FieldManual() {
             );
           })}
           {filteredPages.length === 0 && (
-            <div style={{ padding: '12px 10px', fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', color: '#9AA0A8' }}>
+            <div style={{
+              padding: '12px 10px',
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: '9px',
+              color: '#9AA0A8',
+            }}>
               No matches
             </div>
           )}
         </div>
       </div>
 
-      {/* Iframe content area */}
+      {/* ── Iframe content area ─────────────────────────────────────────── */}
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        {!iframeReady && (
+        {loadingVisible && (
           <div
             style={{
               position: 'absolute',
@@ -169,7 +231,7 @@ export default function FieldManual() {
           ref={iframeRef}
           src="/manual/v4_2.html"
           title="Restless Field Manual v4.2"
-          onLoad={() => setIframeReady(true)}
+          onLoad={handleLoad}
           sandbox="allow-same-origin allow-scripts"
           style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
         />
