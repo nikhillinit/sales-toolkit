@@ -134,6 +134,7 @@ function AppShell() {
             aria-current={isActive ? 'page' : undefined}
             style={{
               flex: 1,
+              minWidth: '44px',
               padding: '10px 4px',
               border: 'none',
               borderBottom: `2px solid ${isActive ? '#A82820' : 'transparent'}`,

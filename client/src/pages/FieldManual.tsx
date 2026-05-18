@@ -39,6 +39,7 @@ export default function FieldManual() {
           Tool:
         </span>
         <select
+          aria-label="Select field manual tool section"
           value={activeSectionId}
           onChange={e => setActiveSectionId(e.target.value)}
           style={{

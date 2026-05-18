@@ -138,7 +138,7 @@ export default function StoryCardBuilder() {
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
       {/* Header */}
       <div style={{ background: '#1A1D22', padding: '12px 16px', flexShrink: 0, borderBottom: '2px solid #A82820' }}>
-        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '9px', color: '#A82820', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '2px' }}>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '9px', color: '#E8524A', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '2px' }}>
           Tool 10A · Story Capture
         </div>
         <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: '22px', color: '#fff', letterSpacing: '0.01em', lineHeight: 1.1 }}>
@@ -240,7 +240,7 @@ export default function StoryCardBuilder() {
 
             {/* Live Preview */}
             <div style={{ background: '#1A1D22', borderRadius: '4px', padding: '14px', marginBottom: '14px' }}>
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '10px', color: '#A82820', letterSpacing: '0.08em', marginBottom: '12px' }}>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '10px', color: '#E8524A', letterSpacing: '0.08em', marginBottom: '12px' }}>
                 LIVE SCRIPT PREVIEW
               </div>
 

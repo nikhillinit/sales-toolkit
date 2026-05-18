@@ -833,7 +833,7 @@ export default function RoleplaySimulator() {
 
       {/* Header */}
       <div style={{ background: '#1A1D22', padding: '10px 16px', flexShrink: 0, borderBottom: '2px solid #A82820' }}>
-        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '9px', color: '#A82820', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '1px' }}>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '9px', color: '#E8524A', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '1px' }}>
           Roleplay Simulator · Four-Gear Practice
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -871,7 +871,7 @@ export default function RoleplaySimulator() {
             </div>
             <div style={{ marginBottom: '10px' }}>
               <label className="os-label">Model</label>
-              <select value={model} onChange={e => setModel(e.target.value)} style={{ width: '100%', padding: '8px', border: '1px solid #C8CCD2', background: '#FBF8F1', fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', borderRadius: '3px', color: '#1A1D22' }}>
+              <select aria-label="Select AI model" value={model} onChange={e => setModel(e.target.value)} style={{ width: '100%', padding: '8px', border: '1px solid #C8CCD2', background: '#FBF8F1', fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', borderRadius: '3px', color: '#1A1D22' }}>
                 {currentProvider.models.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
               </select>
             </div>
@@ -895,7 +895,7 @@ export default function RoleplaySimulator() {
                 <span style={{ fontSize: '24px', flexShrink: 0 }}>{p.avatar}</span>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: '15px', color: '#1A1D22', lineHeight: 1.2 }}>{p.name} · {p.role}</div>
-                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', color: '#A82820', fontWeight: 700, letterSpacing: '0.06em', marginTop: '2px' }}>{p.segmentLabel}</div>
+                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', color: '#A82820', fontWeight: 700, letterSpacing: '0.06em', marginTop: '2px', background: 'transparent' }}>{p.segmentLabel}</div>
                   <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
                     <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', color: '#4A5159', background: '#EFEBE0', padding: '2px 5px', borderRadius: '2px' }}>{p.callType}</span>
                     <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', color: '#4A5159', background: '#EFEBE0', padding: '2px 5px', borderRadius: '2px' }}>Close: {p.targetClose.split('(')[0].trim()}</span>
@@ -1007,10 +1007,10 @@ export default function RoleplaySimulator() {
 
           {/* Four Gear reminder */}
           <div style={{ background: '#1A1D22', borderRadius: '4px', padding: '12px' }}>
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '10px', color: '#A82820', letterSpacing: '0.08em', marginBottom: '8px' }}>FOUR-GEAR QUALIFICATION</div>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '10px', color: '#E8524A', letterSpacing: '0.08em', marginBottom: '8px' }}>FOUR-GEAR QUALIFICATION</div>
             {[{ g: 'G1', l: 'Named Pain', d: 'Uncover a specific, named pain point. Not generic.' }, { g: 'G2', l: 'Access', d: 'Earn the right to a trial. Open the door.' }, { g: 'G3', l: 'Trial Fit', d: 'Match the right trial format to this buyer and segment.' }, { g: 'G4', l: 'Feedback Loop', d: 'Set a specific follow-up: date, channel, what you\'re checking.' }].map((g, i, arr) => (
               <div key={g.g} style={{ display: 'flex', gap: '8px', padding: '5px 0', borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '10px', color: '#A82820', minWidth: '22px', paddingTop: '1px' }}>{g.g}</span>
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '10px', color: '#E8524A', minWidth: '22px', paddingTop: '1px' }}>{g.g}</span>
                 <div><span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: '13px', color: '#fff' }}>{g.l}</span><span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.55)', marginLeft: '6px' }}>{g.d}</span></div>
               </div>
             ))}
@@ -1026,12 +1026,12 @@ export default function RoleplaySimulator() {
               <span style={{ fontSize: '36px' }}>{selectedPersona.avatar}</span>
               <div>
                 <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: '22px', color: '#fff', lineHeight: 1.1 }}>{selectedPersona.name}</div>
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#A82820', fontWeight: 700, letterSpacing: '0.06em', marginTop: '2px' }}>{selectedPersona.role} · {selectedPersona.segmentLabel}</div>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#E8524A', fontWeight: 700, letterSpacing: '0.06em', marginTop: '2px' }}>{selectedPersona.role} · {selectedPersona.segmentLabel}</div>
               </div>
             </div>
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#A82820', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '4px' }}>IDENTITY</div>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#E8524A', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '4px' }}>IDENTITY</div>
             <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.5, marginBottom: '10px' }}>{selectedPersona.identity}</div>
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#A82820', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '4px' }}>JOB TO BE DONE</div>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#E8524A', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '4px' }}>JOB TO BE DONE</div>
             <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>{selectedPersona.jtbd}</div>
           </div>
 
@@ -1099,7 +1099,7 @@ export default function RoleplaySimulator() {
 
           {/* Primary trust signal */}
           <div style={{ background: '#1A1D22', borderRadius: '4px', padding: '12px', marginBottom: '14px' }}>
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', fontWeight: 700, color: '#A82820', letterSpacing: '0.08em', marginBottom: '4px' }}>PRIMARY TRUST SIGNAL</div>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', fontWeight: 700, color: '#E8524A', letterSpacing: '0.08em', marginBottom: '4px' }}>PRIMARY TRUST SIGNAL</div>
             <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.5 }}>{selectedPersona.primaryTrustSignal}</div>
           </div>
 
@@ -1141,7 +1141,7 @@ export default function RoleplaySimulator() {
                   <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#1A1D22', display: 'grid', placeItems: 'center', fontSize: '16px', flexShrink: 0 }}>{selectedPersona?.avatar}</div>
                 )}
                 <div style={{ maxWidth: '78%', padding: '10px 12px', borderRadius: '4px', background: msg.role === 'user' ? '#A82820' : '#fff', border: msg.role === 'buyer' ? '1px solid #C8CCD2' : 'none', color: msg.role === 'user' ? '#fff' : '#1A1D22', fontSize: '14px', lineHeight: 1.5, fontFamily: "'Source Sans 3', sans-serif" }}>
-                  {msg.role === 'buyer' && <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', fontWeight: 700, color: '#A82820', marginBottom: '4px', letterSpacing: '0.06em' }}>{selectedPersona?.name?.toUpperCase()} · {selectedPersona?.role?.toUpperCase()}</div>}
+                  {msg.role === 'buyer' && <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', fontWeight: 700, color: '#8B1C15', marginBottom: '4px', letterSpacing: '0.06em' }}>{selectedPersona?.name?.toUpperCase()} · {selectedPersona?.role?.toUpperCase()}</div>}
                   {msg.content}
                 </div>
               </div>
@@ -1213,7 +1213,7 @@ export default function RoleplaySimulator() {
                 {/* Compliance flag */}
                 {feedback.complianceFlag && (
                   <div style={{ background: '#1A1D22', border: '2px solid #A82820', borderRadius: '4px', padding: '10px 12px', marginBottom: '12px' }}>
-                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '9px', color: '#A82820', letterSpacing: '0.08em', marginBottom: '4px' }}>⚠ COMPLIANCE FLAG</div>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '9px', color: '#E8524A', letterSpacing: '0.08em', marginBottom: '4px' }}>⚠ COMPLIANCE FLAG</div>
                     <div style={{ fontSize: '13px', color: '#fff', lineHeight: 1.5 }}>{feedback.complianceFlag}</div>
                   </div>
                 )}
@@ -1239,7 +1239,7 @@ export default function RoleplaySimulator() {
                     {feedback.strengths.map((s, i) => <div key={i} style={{ fontSize: '12px', color: '#1A1D22', lineHeight: 1.5, marginBottom: '3px' }}>✓ {s}</div>)}
                   </div>
                   <div style={{ background: '#FEECEC', border: '1px solid #A82820', borderRadius: '3px', padding: '10px' }}>
-                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '9px', color: '#A82820', letterSpacing: '0.08em', marginBottom: '6px' }}>IMPROVE</div>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '9px', color: '#A82820', letterSpacing: '0.08em', marginBottom: '6px', background: 'transparent' }}>IMPROVE</div>
                     {feedback.improvements.map((s, i) => <div key={i} style={{ fontSize: '12px', color: '#1A1D22', lineHeight: 1.5, marginBottom: '3px' }}>→ {s}</div>)}
                   </div>
                 </div>
@@ -1254,7 +1254,7 @@ export default function RoleplaySimulator() {
                   )}
                   {feedback.worstLine && (
                     <div style={{ background: '#FBF8F1', border: '1px solid #EFEBE0', borderRadius: '3px', padding: '10px 12px' }}>
-                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '9px', color: '#A82820', letterSpacing: '0.08em', marginBottom: '4px' }}>WORST LINE</div>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '9px', color: '#A82820', letterSpacing: '0.08em', marginBottom: '4px', background: 'transparent' }}>WORST LINE</div>
                       <div style={{ fontSize: '12px', color: '#1A1D22', fontStyle: 'italic', lineHeight: 1.5 }}>"{feedback.worstLine}"</div>
                     </div>
                   )}
@@ -1263,7 +1263,7 @@ export default function RoleplaySimulator() {
                 {/* Coach note */}
                 {feedback.nextStep && (
                   <div style={{ background: '#1A1D22', borderRadius: '3px', padding: '10px 12px', marginBottom: '14px' }}>
-                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '9px', color: '#A82820', letterSpacing: '0.08em', marginBottom: '4px' }}>COACH NOTE FOR NEXT TIME</div>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '9px', color: '#E8524A', letterSpacing: '0.08em', marginBottom: '4px' }}>COACH NOTE FOR NEXT TIME</div>
                     <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.5 }}>{feedback.nextStep}</div>
                   </div>
                 )}

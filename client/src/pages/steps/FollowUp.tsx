@@ -163,7 +163,7 @@ function OutcomeTab() {
     <div>
       <div style={{ marginBottom: '12px' }}>
         <label className="os-label">Select Trial</label>
-        <select value={selectedId ?? ''} onChange={e => { setSelectedId(e.target.value ? Number(e.target.value) : null); setOutcome(''); setNotes(''); }}
+        <select aria-label="Select trial to close" value={selectedId ?? ''} onChange={e => { setSelectedId(e.target.value ? Number(e.target.value) : null); setOutcome(''); setNotes(''); }}
           style={{ width: '100%', padding: '10px', border: '2px solid #C8CCD2', background: '#FBF8F1', fontFamily: "'Source Sans 3', sans-serif", fontSize: '14px', borderRadius: '3px', color: '#1A1D22', cursor: 'pointer' }}>
           <option value="">Choose trial to close...</option>
           {trials.map(t => <option key={t.id} value={t.id}>{t.acct} — {t.human} [{t.code}]</option>)}
@@ -174,7 +174,7 @@ function OutcomeTab() {
         <>
           <div style={{ marginBottom: '10px' }}>
             <label className="os-label">Outcome</label>
-            <select value={outcome} onChange={e => setOutcome(e.target.value)}
+            <select aria-label="Select trial outcome" value={outcome} onChange={e => setOutcome(e.target.value)}
               style={{ width: '100%', padding: '10px', border: '2px solid #C8CCD2', background: '#FBF8F1', fontFamily: "'Source Sans 3', sans-serif", fontSize: '14px', borderRadius: '3px', color: '#1A1D22', cursor: 'pointer' }}>
               <option value="">Select outcome...</option>
               {OUTCOMES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}

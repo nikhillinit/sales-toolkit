@@ -108,7 +108,7 @@ function StepIntention({ data, setData }: { data: any; setData: (d: any) => void
       <div style={sectionTitleStyle}>01 · Weekly Intention</div>
       <div style={{ marginBottom: '12px' }}>
         <label style={labelStyle}>Primary Ring Focus This Week</label>
-        <select value={data.ringFocus} onChange={e => setData({ ...data, ringFocus: e.target.value })} style={{ ...inputStyle, cursor: 'pointer' }}>
+        <select aria-label="Primary ring focus this week" value={data.ringFocus} onChange={e => setData({ ...data, ringFocus: e.target.value })} style={{ ...inputStyle, cursor: 'pointer' }}>
           <option value="">Select ring...</option>
           {RINGS.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
@@ -179,7 +179,7 @@ function StepFollowUps({ data, setData }: { data: any; setData: (d: any) => void
                 <div style={{ fontWeight: 700, fontSize: '13px' }}>{t.acct}</div>
                 <div style={{ fontSize: '11px', color: '#4A5159' }}>{t.code} · {t.human}</div>
               </div>
-              <select value={data.fuAssignments[t.id] || ''} onChange={e => updateAssignment(t.id, e.target.value)}
+              <select aria-label={`Assign follow-up day for ${t.acct}`} value={data.fuAssignments[t.id] || ''} onChange={e => updateAssignment(t.id, e.target.value)}
                 style={{ ...inputStyle, width: 'auto', minWidth: '110px', fontSize: '12px', padding: '6px 8px' }}>
                 <option value="">Assign day...</option>
                 {DAYS.map(d => <option key={d} value={d}>{d}</option>)}

@@ -336,7 +336,7 @@ export default function LaneSelector() {
         background: '#1A1D22', padding: '12px 16px', flexShrink: 0,
         borderBottom: '2px solid #A82820',
       }}>
-        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '9px', color: '#A82820', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '2px' }}>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '9px', color: '#E8524A', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '2px' }}>
           Tool 15 · Weekly Cadence
         </div>
         <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: '22px', color: '#fff', letterSpacing: '0.01em', lineHeight: 1.1 }}>

@@ -194,6 +194,7 @@ export default function Activate() {
       return (
         <select
           id={field.id}
+          aria-label={field.label}
           value={val}
           onChange={e => handleChange(field.id, e.target.value)}
           onBlur={() => saveDraft()}
