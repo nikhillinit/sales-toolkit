@@ -1,0 +1,32 @@
+Browser Test & Gap Report — Restless Field Toolkit
+What I Tested
+The app is running and renders correctly in the preview. It shows the phone-frame shell with the "RESTLESS FIELD OS" header, bottom navigation (Sales OS, Field Manual, Claim Check, Lane Plan), and the Step 01 Prepare / Pre-Call Checklist. The UI itself is polished and functional.
+
+Browser console had 3 active 404 errors — resources failing to load at runtime. These are worth investigating but didn't break the visible UI.
+
+Gap Analysis: Current State vs. Strategy Document
+Area	Strategy Requires	Current State	Gap
+Storage — Domain Data	IndexedDB via idb-keyval	sessionStorage snapshots only	🔴 Critical — data is lost on tab close
+Storage — UI Prefs	localStorage for theme/prefs	Mixed into same session snapshot	🟠 High
+PWA navigateFallback	/index.html	Unknown — likely offline.html or unset	🔴 Critical — deep links break offline
+Cross-Tab Sync	BroadcastChannel	Not implemented	🟠 High
+Reducer Purity	Pure reducers, useEffect for persistence	State managed in contexts, but persistence is sync in sessionStorage	🟠 High
+Context Architecture	Existing sliced contexts (draft/stats/trials/ui)	✅ Already modular — this matches	✅ Good
+Routes: /network	NetworkTracker page	Not in routing	🟡 Medium
+Routes: /simulator	RoleplaySimulator page	Not in routing	🟡 Medium
+Routes: /settings	Data export/import + storage status	Not in routing	🟡 Medium
+Camera/EXIF	No EXIF on video stream; use browser-image-compression	ClaimScanner.tsx exists — EXIF handling unknown	🟠 High
+Reminders	.ics calendar export	Not implemented	🟠 High
+Backend	Deprecate server/ directory	Express server actively used for static hosting	🟡 Medium
+idb-keyval install	Bundled via pnpm, no CDN	Not installed	🔴 Critical (blocking everything above)
+The Core Problem
+The entire strategy document is built around migrating from sessionStorage to IndexedDB. Right now, every opportunity, draft, and form entry disappears when the user closes the tab. For a field sales tool used on mobile by reps between calls, that's a data-reliability showstopper.
+
+Everything else in the document (BroadcastChannel, pure reducers, PWA routing) flows from that single foundational change.
+
+What's Already in Good Shape
+The modular context architecture (draft/stats/trials/ui) the strategy requires already exists — no rewrite needed there
+The UI and step flow are solid and don't need touching
+Wouter routing is in place
+React 19 + Vite + Tailwind 4 stack is correct
+Would you like me to plan out the implementation of these fixes as a task? I can scope it as a single end-to-end task covering the storage migration, PWA fix, missing routes, and camera/calendar corrections — or break it into phases if you'd prefer to tackle it incrementally.
