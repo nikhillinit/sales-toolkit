@@ -117,3 +117,32 @@ export const buildRoleplayPrefill = (code: ObjectionCode): RoleplayPrefill => {
     manualPageId: "p19",
   };
 };
+
+// ── Manual CTA context ─────────────────────────────────────────────────────────────────────────────
+// Carried in data-app-context on every in-manual CTA button.
+// Validated at the destination form via Zod (Option B from the review).
+export interface ManualCTAContext {
+  prefill?: {
+    toolSlug?: string;
+    manualPageId?: string;
+    buyerWords?: string;
+  };
+}
+
+/**
+ * Read ManualCTAContext from window.history.state.
+ * Call at the top of any destination form that accepts manual deep-links.
+ *
+ * @example
+ *   const ctx = readManualCTAContext();
+ *   if (ctx?.prefill?.toolSlug) form.setValue('toolSlug', ctx.prefill.toolSlug);
+ */
+export function readManualCTAContext(): ManualCTAContext | null {
+  try {
+    const state = window.history.state as { prefill?: ManualCTAContext['prefill'] } | null;
+    if (!state || typeof state !== 'object') return null;
+    return { prefill: state.prefill };
+  } catch {
+    return null;
+  }
+}
