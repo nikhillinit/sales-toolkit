@@ -16,6 +16,10 @@ export interface Trial {
   yesRoute: string;
   noRoute: string;
   status: 'shipped' | 'closed';
+  // Feature 5: Follow-Up Cadence
+  cadenceStep: number; // 0=shipped, 1=D+1, 2=D+3, 3=D+7, 4=D+14, 5=D+30 done
+  cadenceCompletedAt: string[]; // ISO timestamps per completed step
+  shippedAt: string; // ISO timestamp when trial was shipped
 }
 
 export interface Stats {
@@ -29,12 +33,37 @@ export interface Stats {
   blocker: number;
 }
 
+// Feature 6: Ring Scorecard
+export type RingKey = 'r1' | 'r2' | 'r3' | 'r4';
+export interface RingMetrics {
+  contacts: number;
+  trials: number;
+  yesNo: number;
+  reorders: number;
+}
+export type RingStats = Record<RingKey, RingMetrics>;
+
+export const DEFAULT_RING_STATS: RingStats = {
+  r1: { contacts: 0, trials: 0, yesNo: 0, reorders: 0 },
+  r2: { contacts: 0, trials: 0, yesNo: 0, reorders: 0 },
+  r3: { contacts: 0, trials: 0, yesNo: 0, reorders: 0 },
+  r4: { contacts: 0, trials: 0, yesNo: 0, reorders: 0 },
+};
+
+export const RING_TARGETS: RingStats = {
+  r1: { contacts: 10, trials: 3, yesNo: 1, reorders: 0 },
+  r2: { contacts: 8,  trials: 2, yesNo: 1, reorders: 0 },
+  r3: { contacts: 5,  trials: 1, yesNo: 0, reorders: 1 },
+  r4: { contacts: 5,  trials: 1, yesNo: 0, reorders: 1 },
+};
+
 export interface AppStateData {
   currentStep: StepId;
   completedSteps: StepId[];
   gearsLocked: boolean;
   trials: Trial[];
   stats: Stats;
+  ringStats: RingStats;
   formDraft: Record<string, string | boolean>;
 }
 

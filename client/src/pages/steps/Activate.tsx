@@ -152,6 +152,9 @@ export default function Activate() {
       yesRoute:  values['act-yes-route'] || '',
       noRoute:   values['act-no-route']  || '',
       status:    'shipped',
+      cadenceStep: 0,
+      cadenceCompletedAt: [],
+      shippedAt: new Date().toISOString(),
     };
 
     addTrial(trial);

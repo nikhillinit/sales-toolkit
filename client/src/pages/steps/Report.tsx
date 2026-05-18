@@ -3,8 +3,87 @@
  * Weekly scoreboard + 1:1 agenda builder + quality gate + sample report. Copy to clipboard.
  * Unified Signal OS design system.
  */
-import { useDraftActions, useStatsActions, useStatsState, useToastActions, type Stats } from '@/contexts/AppState';
+import { useDraftActions, useStatsActions, useStatsState, useToastActions, type Stats, type RingKey, type RingStats, DEFAULT_RING_STATS, RING_TARGETS } from '@/contexts/AppState';
 import { useState } from 'react';
+
+// ─── Feature 6: Ring Scorecard ────────────────────────────────────────────────
+const RING_LABELS: Record<RingKey, string> = {
+  r1: 'Cold Station / Fire / EMS',
+  r2: 'Warm Intro / Event',
+  r3: 'Healthcare / MWR',
+  r4: 'Industrial / Gym',
+};
+type RingMetricKey = 'contacts' | 'trials' | 'yesNo' | 'reorders';
+const METRIC_LABELS: RingMetricKey[] = ['contacts', 'trials', 'yesNo', 'reorders'];
+const METRIC_DISPLAY: Record<RingMetricKey, string> = { contacts: 'Contacts', trials: 'Trials', yesNo: 'Yes/No', reorders: 'Reorders' };
+
+function DeltaBadge({ value, target }: { value: number; target: number }) {
+  const delta = value - target;
+  if (delta > 0) return <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', fontWeight: 700, color: '#2E7D32', background: '#E8F5E9', padding: '1px 5px', borderRadius: '2px', border: '1px solid #2E7D32' }}>+{delta}</span>;
+  if (delta < 0) return <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', fontWeight: 700, color: '#A82820', background: '#FEECEC', padding: '1px 5px', borderRadius: '2px', border: '1px solid #A82820' }}>{delta}</span>;
+  return <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', fontWeight: 700, color: '#4A5159', background: '#EFEBE0', padding: '1px 5px', borderRadius: '2px', border: '1px solid #C8CCD2' }}>0</span>;
+}
+
+function NumStepper({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+      <button onClick={() => onChange(Math.max(0, value - 1))} style={{ width: '22px', height: '22px', background: '#EFEBE0', border: '2px solid #1A1D22', borderRadius: '2px', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'grid', placeItems: 'center', boxShadow: '1px 1px 0px #1A1D22', color: '#1A1D22', lineHeight: 1 }}>−</button>
+      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '13px', minWidth: '18px', textAlign: 'center', color: '#1A1D22' }}>{value}</span>
+      <button onClick={() => onChange(value + 1)} style={{ width: '22px', height: '22px', background: '#1A1D22', border: '2px solid #1A1D22', borderRadius: '2px', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'grid', placeItems: 'center', boxShadow: '1px 1px 0px #A82820', color: '#F4F1EA', lineHeight: 1 }}>+</button>
+    </div>
+  );
+}
+
+function RingScorecard() {
+  const [ringStats, setRingStats] = useState<RingStats>(DEFAULT_RING_STATS);
+  const rings: RingKey[] = ['r1', 'r2', 'r3', 'r4'];
+
+  const update = (ring: RingKey, metric: RingMetricKey, val: number) => {
+    setRingStats(prev => ({ ...prev, [ring]: { ...prev[ring], [metric]: val } }));
+  };
+
+  return (
+    <div style={{ background: '#fff', border: '2px solid #1A1D22', borderRadius: '3px', padding: '14px', marginBottom: '14px', boxShadow: '4px 4px 0px #1A1D22' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+        <div className="os-h2" style={{ marginTop: 0, marginBottom: 0 }}>Ring Scorecard</div>
+        <button onClick={() => setRingStats(DEFAULT_RING_STATS)} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', padding: '3px 8px', background: 'transparent', border: '1px solid #C8CCD2', borderRadius: '2px', cursor: 'pointer', color: '#4A5159' }}>Reset</button>
+      </div>
+      <p style={{ fontSize: '12px', color: '#4A5159', margin: '0 0 12px', fontStyle: 'italic' }}>Track activity by ring. Delta vs. floor target shown in badge.</p>
+
+      {/* Column headers */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 64px)', gap: '4px', marginBottom: '6px', paddingBottom: '6px', borderBottom: '2px solid #1A1D22' }}>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', color: '#4A5159' }}>Ring</div>
+        {METRIC_LABELS.map(m => <div key={m} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', color: '#4A5159', textAlign: 'center' }}>{METRIC_DISPLAY[m]}</div>)}
+      </div>
+
+      {rings.map((ring, ri) => (
+        <div key={ring} style={{ display: 'grid', gridTemplateColumns: '1fr repeat(4, 64px)', gap: '4px', alignItems: 'center', padding: '8px 0', borderBottom: ri < 3 ? '1px solid #EFEBE0' : 'none' }}>
+          <div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: '#A82820' }}>{ring.toUpperCase()}</div>
+            <div style={{ fontSize: '10px', color: '#4A5159', lineHeight: 1.2 }}>{RING_LABELS[ring]}</div>
+          </div>
+          {METRIC_LABELS.map(metric => {
+            const val = ringStats[ring][metric];
+            const target = RING_TARGETS[ring][metric];
+            return (
+              <div key={metric} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                <NumStepper value={val} onChange={v => update(ring, metric, v)} />
+                <DeltaBadge value={val} target={target} />
+              </div>
+            );
+          })}
+        </div>
+      ))}
+
+      <div style={{ marginTop: '10px', padding: '8px', background: '#FBF8F1', border: '1px solid #EFEBE0', borderRadius: '2px' }}>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', color: '#4A5159', marginBottom: '4px' }}>Floor Targets / Week</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '4px' }}>
+          {rings.map(ring => <div key={ring} style={{ fontSize: '10px', color: '#4A5159' }}><strong style={{ color: '#1A1D22' }}>{ring.toUpperCase()}:</strong> {RING_TARGETS[ring].contacts}C · {RING_TARGETS[ring].trials}T · {RING_TARGETS[ring].yesNo}Y · {RING_TARGETS[ring].reorders}R</div>)}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const STAT_DEFS: { key: keyof Stats; label: string; color?: string; sub: string }[] = [
   { key: 'out',     label: 'Real Outreach Attempts',              sub: 'Calls, DMs, emails, walk-ins',     color: '#1A1D22' },
@@ -194,6 +273,9 @@ export default function Report() {
           }}
         >↺ Reset Stats</button>
       </div>
+
+      {/* Ring Scorecard */}
+      <RingScorecard />
 
       {/* 1:1 Agenda */}
       <div style={{ background: '#fff', border: '1px solid #C8CCD2', borderRadius: '4px', padding: '14px', marginBottom: '14px' }}>

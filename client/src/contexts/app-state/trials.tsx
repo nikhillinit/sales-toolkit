@@ -7,6 +7,7 @@ interface TrialActionsValue {
   closeTrial: (id: number, outcome: string) => void;
   removeTrial: (id: number) => void;
   restoreTrials: (trials: Trial[]) => void;
+  advanceCadence: (id: number) => void;
 }
 
 const TrialsStateContext = createContext<Trial[] | null>(null);
@@ -28,7 +29,13 @@ export function TrialProvider({ children }: { children: React.ReactNode }) {
   const { modStat } = useStatsActions();
 
   const addTrial = useCallback((trial: Trial) => {
-    setTrials(prev => [...prev, trial]);
+    const withCadence: Trial = {
+      ...trial,
+      cadenceStep: trial.cadenceStep ?? 0,
+      cadenceCompletedAt: trial.cadenceCompletedAt ?? [],
+      shippedAt: trial.shippedAt ?? new Date().toISOString(),
+    };
+    setTrials(prev => [...prev, withCadence]);
   }, []);
 
   const removeTrial = useCallback((id: number) => {
@@ -42,12 +49,30 @@ export function TrialProvider({ children }: { children: React.ReactNode }) {
   }, [modStat]);
 
   const restoreTrials = useCallback((nextTrials: Trial[]) => {
-    setTrials(nextTrials);
+    const migrated = nextTrials.map(t => ({
+      ...t,
+      cadenceStep: t.cadenceStep ?? 0,
+      cadenceCompletedAt: t.cadenceCompletedAt ?? [],
+      shippedAt: t.shippedAt ?? t.fuDate ?? new Date().toISOString(),
+    }));
+    setTrials(migrated);
+  }, []);
+
+  const advanceCadence = useCallback((id: number) => {
+    setTrials(prev => prev.map(t => {
+      if (t.id !== id) return t;
+      const nextStep = Math.min(t.cadenceStep + 1, 5);
+      return {
+        ...t,
+        cadenceStep: nextStep,
+        cadenceCompletedAt: [...t.cadenceCompletedAt, new Date().toISOString()],
+      };
+    }));
   }, []);
 
   const actionsValue = useMemo(
-    () => ({ addTrial, closeTrial, removeTrial, restoreTrials }),
-    [addTrial, closeTrial, removeTrial, restoreTrials],
+    () => ({ addTrial, closeTrial, removeTrial, restoreTrials, advanceCadence }),
+    [addTrial, closeTrial, removeTrial, restoreTrials, advanceCadence],
   );
 
   return (

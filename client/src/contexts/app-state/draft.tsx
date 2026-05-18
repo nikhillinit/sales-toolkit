@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { useStatsActions, useStatsState } from './stats';
 import { useTrialActions, useTrialsState } from './trials';
 import { useUiActions, useUiState } from './ui';
-import { STORAGE_KEY, type AppStateData } from './types';
+import { DEFAULT_RING_STATS, STORAGE_KEY, type AppStateData } from './types';
 
 type FormDraft = Record<string, string | boolean>;
 
@@ -49,6 +49,7 @@ export function DraftProvider({ children }: { children: React.ReactNode }) {
       ...uiState,
       trials,
       stats,
+      ringStats: DEFAULT_RING_STATS,
       formDraft,
     };
 

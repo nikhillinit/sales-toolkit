@@ -33,6 +33,7 @@ function Router() {
       <Route path="/network" component={Home} />
       <Route path="/roleplay" component={Home} />
       <Route path="/story" component={Home} />
+      <Route path="/cadence" component={Home} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

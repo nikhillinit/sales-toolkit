@@ -3,6 +3,7 @@ import { DraftProvider, useDraftActions, useDraftState } from './draft';
 import { StatsProvider, useStatsActions, useStatsState } from './stats';
 import { TrialProvider, useTrialActions, useTrialsState } from './trials';
 import { UiStateProvider, useToastActions, useToastMessage, useUiActions, useUiState } from './ui';
+import { DEFAULT_RING_STATS } from './types';
 import type { AppStateData } from './types';
 
 export * from './draft';
@@ -40,6 +41,7 @@ export function useAppState() {
       ...uiState,
       stats,
       trials,
+      ringStats: DEFAULT_RING_STATS,
       formDraft: draftState.formDraft,
     }),
     [draftState.formDraft, stats, trials, uiState],
