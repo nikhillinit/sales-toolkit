@@ -1,0 +1,379 @@
+<style id="fieldkit-offline-styles">
+/* FieldKit Offline Runtime — matches manual design tokens */
+#fk-launch {
+  position: fixed; bottom: 20px; right: 20px; z-index: 99990;
+  background: var(--brick, #A82820); color: #fff; border: none;
+  padding: 12px 22px; border-radius: 6px;
+  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+  cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+#fk-launch:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,0.4); }
+#fk-launch:active { transform: translateY(0); }
+#fk-launch strong { font-weight: 700; letter-spacing: .04em; }
+
+#fk-panel {
+  position: fixed; top: 0; right: -420px; width: 400px; height: 100vh;
+  z-index: 99999; background: var(--bg, #F4F1EA); border-left: 2px solid var(--rule, #C8CCD2);
+  display: flex; flex-direction: column; overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px; color: var(--text, #2A2F35);
+  box-shadow: -8px 0 40px rgba(0,0,0,0.15);
+  transition: right .28s cubic-bezier(.4,0,.2,1);
+}
+#fk-panel.open { right: 0; }
+@media (max-width: 480px) {
+  #fk-panel { width: 100vw; right: -100vw; }
+  #fk-panel.open { right: 0; }
+}
+
+#fk-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--rule, #C8CCD2);
+  background: var(--surface2, #EFEBE0);
+}
+#fk-head h2 {
+  font-family: 'JetBrains Mono', monospace; font-size: 13px;
+  font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--fg, #1A1D22); margin: 0;
+}
+#fk-head .fk-build {
+  font-size: 10px; color: var(--muted, #3F4A55); font-family: monospace;
+  margin-left: 8px; opacity: .7;
+}
+#fk-close {
+  background: none; border: none; font-size: 18px; cursor: pointer;
+  color: var(--muted, #3F4A55); padding: 4px 8px; border-radius: 4px;
+  transition: background .12s;
+}
+#fk-close:hover { background: var(--red-bg, #F6DAD6); color: var(--brick, #A82820); }
+
+#fk-tabs {
+  display: flex; gap: 0; border-bottom: 1px solid var(--rule, #C8CCD2);
+  background: var(--surface, #F4F1EA); overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+#fk-tabs button {
+  flex: 1; min-width: 0; padding: 10px 8px; border: none; background: none;
+  font-size: 11px; font-weight: 600; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--muted, #3F4A55);
+  cursor: pointer; border-bottom: 2px solid transparent;
+  transition: color .12s, border-color .12s;
+  white-space: nowrap;
+}
+#fk-tabs button:hover { color: var(--fg, #1A1D22); }
+#fk-tabs button.active {
+  color: var(--brick, #A82820); border-bottom-color: var(--brick, #A82820);
+}
+
+#fk-body {
+  flex: 1; overflow-y: auto; padding: 16px 20px;
+  -webkit-overflow-scrolling: touch;
+}
+#fk-body h3 {
+  font-family: 'JetBrains Mono', monospace; font-size: 14px;
+  font-weight: 700; letter-spacing: .06em; color: var(--fg, #1A1D22);
+  margin: 0 0 12px 0;
+}
+
+.fk-input {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--border, #C8CCD2);
+  border-radius: 4px; font-size: 13px; background: #fff;
+  color: var(--text, #2A2F35); outline: none;
+  transition: border-color .15s;
+}
+.fk-input:focus { border-color: var(--brick, #A82820); }
+.fk-textarea {
+  width: 100%; min-height: 120px; padding: 12px; resize: vertical;
+  border: 1px solid var(--border, #C8CCD2); border-radius: 4px;
+  font-size: 13px; font-family: inherit; background: #fff;
+  color: var(--text, #2A2F35); outline: none;
+  transition: border-color .15s;
+}
+.fk-textarea:focus { border-color: var(--brick, #A82820); }
+
+.fk-card {
+  background: var(--surface2, #EFEBE0); border: 1px solid var(--rule, #C8CCD2);
+  border-radius: 6px; padding: 14px 16px; margin: 10px 0;
+}
+.fk-card p { margin: 6px 0 0 0; line-height: 1.5; }
+.fk-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.fk-kicker {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--brick, #A82820); margin-bottom: 4px;
+}
+.fk-mini { font-size: 12px; color: var(--muted, #3F4A55); line-height: 1.5; }
+
+.fk-btn {
+  display: inline-block; padding: 8px 14px; border: none; border-radius: 4px;
+  font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  cursor: pointer; transition: background .12s, transform .1s;
+  background: var(--brick, #A82820); color: #fff;
+}
+.fk-btn:hover { background: #8a2018; transform: translateY(-1px); }
+.fk-btn:active { transform: translateY(0); }
+.fk-btn.ghost {
+  background: transparent; color: var(--brick, #A82820);
+  border: 1px solid var(--brick, #A82820);
+}
+.fk-btn.ghost:hover { background: var(--red-bg, #F6DAD6); }
+
+.fk-pill {
+  display: inline-block; padding: 3px 8px; border-radius: 3px;
+  font-size: 11px; font-weight: 600; margin: 2px 3px;
+  background: var(--red-bg, #F6DAD6); color: var(--brick, #A82820);
+}
+.fk-ok { border-color: var(--green, #2E7D32); background: var(--green-bg, #D8ECD9); }
+.fk-ok strong { color: var(--green, #2E7D32); }
+.fk-warn { border-color: var(--gold, #8A6A14); background: var(--gold-bg, #F8E9B6); }
+.fk-warn strong { color: var(--gold, #8A6A14); }
+.fk-block { border-color: var(--brick, #A82820); background: var(--red-bg, #F6DAD6); }
+.fk-block strong { color: var(--brick, #A82820); }
+
+.fk-upgrade-link {
+  display: block; margin-top: 12px; padding: 10px 14px;
+  background: var(--blue-bg, #DCEAF6); border: 1px solid var(--blue, #2A6FA8);
+  border-radius: 4px; text-align: center; text-decoration: none;
+  font-size: 12px; font-weight: 600; color: var(--blue, #2A6FA8);
+  transition: background .12s;
+}
+.fk-upgrade-link:hover { background: #c8ddf0; }
+
+@media print {
+  #fk-launch, #fk-panel { display: none !important; }
+}
+</style>
+
+<script id="fieldkit-offline-runtime">
+(function(){
+  'use strict';
+  var dataEl = document.getElementById('restless-fieldkit-state');
+  if (!dataEl) return;
+  var FK = JSON.parse(dataEl.textContent || '{}');
+  var storeKey = 'restless-fieldkit-offline-state-v1';
+
+  // --- Utilities ---
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function load(){ try { return JSON.parse(localStorage.getItem(storeKey)||'{}'); } catch(e){ return {}; } }
+  function save(v){ try { localStorage.setItem(storeKey, JSON.stringify(v)); } catch(e){} }
+  function dl(name, text){ var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:'application/json'})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href); a.remove();}, 100); }
+  function byId(id){return document.getElementById(id);}
+  function jump(id){ var el=document.getElementById(id); if(el){ el.scrollIntoView({behavior:'smooth', block:'start'}); panel.classList.remove('open'); } }
+
+  // --- App state ---
+  var appState = load();
+  if (!appState.activations) appState.activations=[];
+  if (!appState.notes) appState.notes=[];
+
+  // --- DOM scaffold ---
+  var launch = document.createElement('button');
+  launch.id = 'fk-launch';
+  launch.innerHTML = '<strong>FieldKit</strong> Offline';
+
+  var panel = document.createElement('aside');
+  panel.id = 'fk-panel';
+  panel.setAttribute('aria-label','Restless FieldKit offline toolkit');
+  var buildHash = FK.buildHash ? ' <span class="fk-build">'+esc(FK.buildHash)+'</span>' : '';
+  panel.innerHTML = '<div id="fk-head"><h2>Restless FieldKit'+buildHash+'</h2><button id="fk-close" aria-label="Close panel">\u2715</button></div><div id="fk-tabs"></div><div id="fk-body"></div>';
+
+  document.body.appendChild(launch);
+  document.body.appendChild(panel);
+
+  launch.onclick = function(){ panel.classList.add('open'); render(activeTab); };
+  panel.querySelector('#fk-close').onclick = function(){ panel.classList.remove('open'); };
+
+  // Close on Escape
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && panel.classList.contains('open')) {
+      panel.classList.remove('open');
+    }
+  });
+
+  // --- Tabs ---
+  var tabs = [['manual','Manual'],['claims','Claim Check'],['objections','Objections'],['activate','Activation'],['export','Export']];
+  var activeTab = 'manual';
+
+  function render(tab){
+    activeTab = tab;
+    var t = panel.querySelector('#fk-tabs');
+    t.innerHTML = tabs.map(function(x){
+      return '<button data-tab="'+x[0]+'" class="'+(x[0]===tab?'active':'')+'" aria-label="'+x[1]+' tab">'+x[1]+'</button>';
+    }).join('');
+    Array.prototype.forEach.call(t.querySelectorAll('button'), function(b){
+      b.onclick = function(){ render(b.dataset.tab); };
+    });
+    var renderers = {manual:renderManual, claims:renderClaims, objections:renderObjections, activate:renderActivate, export:renderExport};
+    (renderers[tab] || renderManual)();
+  }
+
+  function body(html){ panel.querySelector('#fk-body').innerHTML = html; }
+
+  // --- Tab: Manual ---
+  function renderManual(){
+    var toolButtons = (FK.tools||[]).map(function(t){
+      return '<button class="fk-btn ghost" style="margin:3px" data-page="'+esc(t.pageId)+'">'+esc(t.id)+' \u00B7 '+esc(t.name)+'</button>';
+    }).join('');
+    body('<h3>Find anything in the manual</h3><input id="fk-search" class="fk-input" placeholder="Search pages, tools, claim rules\u2026" aria-label="Search manual"><div id="fk-results"></div><div class="fk-card"><div class="fk-kicker">Tools</div>'+toolButtons+'</div>');
+    Array.prototype.forEach.call(panel.querySelectorAll('[data-page]'), function(b){
+      b.onclick = function(){ jump(b.dataset.page); };
+    });
+    var input = byId('fk-search'), results = byId('fk-results');
+    function search(){
+      var q = input.value.trim().toLowerCase();
+      if(!q){ results.innerHTML=''; return; }
+      var hits = [];
+      (FK.manualPages||[]).forEach(function(p){
+        var hay = (p.label+' '+p.title+' '+p.text).toLowerCase();
+        if(hay.indexOf(q)>=0) hits.push(p);
+      });
+      (FK.tools||[]).forEach(function(t){
+        if((t.id+' '+t.name+' '+t.job).toLowerCase().indexOf(q)>=0)
+          hits.push({id:t.pageId, label:'Tool '+t.id, title:t.name, text:t.job});
+      });
+      results.innerHTML = hits.slice(0,14).map(function(p){
+        return '<div class="fk-card fk-row"><div><div class="fk-kicker">'+esc(p.id)+'</div><strong>'+esc(p.title||p.label)+'</strong><p class="fk-mini">'+esc((p.text||'').slice(0,180))+'\u2026</p></div><button class="fk-btn" data-jump="'+esc(p.id)+'">Open</button></div>';
+      }).join('') || '<div class="fk-card fk-mini">No matches.</div>';
+      Array.prototype.forEach.call(results.querySelectorAll('[data-jump]'), function(b){
+        b.onclick = function(){ jump(b.dataset.jump); };
+      });
+    }
+    input.oninput = search;
+    input.focus();
+  }
+
+  // --- Tab: Claim Check ---
+  function findBanned(text){
+    var out = [];
+    var low = text.toLowerCase();
+    (FK.claimRules.bannedTerms||[]).forEach(function(term){
+      var ix = low.indexOf(term.toLowerCase());
+      if(ix>=0) out.push({term:term, start:ix});
+    });
+    return out.sort(function(a,b){ return a.start - b.start; });
+  }
+
+  function scanHard(text){
+    var out = [];
+    (FK.claimRules.hardClaims||[]).forEach(function(rule){
+      (rule.patterns||[]).forEach(function(p){
+        try {
+          var re = new RegExp(p, 'ig');
+          var m;
+          while((m = re.exec(text))){
+            out.push({code:rule.code, matched:m[0], severity:rule.severity, suggestion:rule.say});
+            if(!m[0]) break;
+          }
+        } catch(e){}
+      });
+    });
+    return out;
+  }
+
+  function renderClaims(){
+    var bannedPills = (FK.claimRules.bannedTerms||[]).map(function(t){
+      return '<span class="fk-pill">'+esc(t)+'</span>';
+    }).join('');
+    body('<h3>Claim Check</h3><p class="fk-mini">Paste rep copy. The check runs entirely inside this file \u2014 nothing leaves your machine.</p><textarea id="fk-claim-input" class="fk-textarea" placeholder="Paste pitch, email, CTA, or objection response\u2026" aria-label="Claim text input"></textarea><div id="fk-claim-result"></div><div class="fk-card"><div class="fk-kicker">Banned terms</div>'+bannedPills+'</div>');
+    var input = byId('fk-claim-input'), out = byId('fk-claim-result');
+    input.oninput = function(){
+      var text = input.value;
+      if(!text.trim()){ out.innerHTML=''; return; }
+      var b = findBanned(text), h = scanHard(text);
+      var issues = b.length + h.length;
+      if(!issues){
+        out.innerHTML = '<div class="fk-card fk-ok"><strong>\u2713 Clean.</strong><p>No banned terms or hard-claim rules triggered.</p></div>';
+        return;
+      }
+      var severity = (h.some(function(x){return x.severity==='block'}) || b.length) ? 'fk-block' : 'fk-warn';
+      var bannedHtml = b.map(function(x){ return '<span class="fk-pill">'+esc(x.term)+'</span>'; }).join(' ');
+      var hardHtml = h.map(function(x){
+        return '<div class="fk-card"><div class="fk-kicker">'+esc(x.code)+' \u00B7 '+esc(x.severity)+'</div><strong>Matched:</strong> '+esc(x.matched)+'<br><strong>Say instead:</strong> '+esc(x.suggestion)+'</div>';
+      }).join('');
+      out.innerHTML = '<div class="fk-card '+severity+'"><strong>'+issues+' issue(s) found.</strong><p>'+bannedHtml+'</p>'+hardHtml+'</div>';
+    };
+    input.focus();
+  }
+
+  // --- Tab: Objections ---
+  function renderObjections(){
+    body('<h3>Objection Matrix</h3><input id="fk-obj-search" class="fk-input" placeholder="Search buyer says / decode / route\u2026" aria-label="Search objections"><div id="fk-obj-list"></div>');
+    var q = byId('fk-obj-search'), list = byId('fk-obj-list');
+    function draw(){
+      var s = q.value.toLowerCase();
+      var rows = (FK.objections||[]).filter(function(o){
+        return !s || JSON.stringify(o).toLowerCase().indexOf(s) >= 0;
+      });
+      list.innerHTML = rows.map(function(o){
+        return '<div class="fk-card"><div class="fk-kicker">'+esc(o.code)+'</div><strong>Buyer says:</strong> \u201C'+esc(o.buyerSays)+'\u201D<p><strong>Decode:</strong> '+esc(o.decode)+'</p><p><strong>Safe route:</strong> '+esc(o.safeRoute)+'</p><p><strong>Bridge:</strong> '+esc(o.bridge)+'</p><button class="fk-btn ghost" data-copy="'+esc(o.bridge)+'" aria-label="Copy bridge phrase">\u2398 Copy bridge</button></div>';
+      }).join('');
+      Array.prototype.forEach.call(list.querySelectorAll('[data-copy]'), function(b){
+        b.onclick = function(){
+          if(navigator.clipboard) {
+            navigator.clipboard.writeText(b.dataset.copy);
+            b.textContent = '\u2713 Copied';
+            setTimeout(function(){ b.textContent = '\u2398 Copy bridge'; }, 1500);
+          }
+        };
+      });
+    }
+    q.oninput = draw;
+    draw();
+    q.focus();
+  }
+
+  // --- Tab: Activation ---
+  function renderActivate(){
+    var fields = (FK.activationStandard||[]).map(function(f){
+      return '<label class="fk-mini"><strong>'+esc(f.label)+'</strong><br><span style="color:var(--muted)">'+esc(f.requiredAnswer)+'</span><input class="fk-input" data-field="'+esc(f.id)+'" placeholder="Required" aria-label="'+esc(f.label)+'" style="margin-top:4px"></label>';
+    }).join('');
+    var savedCount = (appState.activations||[]).length;
+    body('<h3>Activation Standard</h3><p class="fk-mini">No blanks, no ship. Saved locally in this browser.</p>'+fields+'<button id="fk-save-act" class="fk-btn" style="margin-top:12px">Save activation</button><div id="fk-act-feedback"></div><h3 style="margin-top:20px">Saved ('+savedCount+')</h3><div id="fk-act-list"></div>');
+
+    byId('fk-save-act').onclick = function(){
+      var obj = {id: Date.now(), savedAt: new Date().toISOString()};
+      var ok = true;
+      Array.prototype.forEach.call(panel.querySelectorAll('[data-field]'), function(inp){
+        obj[inp.dataset.field] = inp.value.trim();
+        if(!inp.value.trim()) ok = false;
+      });
+      var feedback = byId('fk-act-feedback');
+      if(!ok){
+        feedback.innerHTML = '<div class="fk-card fk-block" style="margin-top:8px"><strong>No blanks, no ship.</strong> Complete every field before saving.</div>';
+        return;
+      }
+      appState.activations.unshift(obj);
+      save(appState);
+      feedback.innerHTML = '<div class="fk-card fk-ok" style="margin-top:8px"><strong>\u2713 Saved.</strong></div>';
+      setTimeout(function(){ renderActivate(); }, 800);
+    };
+
+    var list = byId('fk-act-list');
+    list.innerHTML = (appState.activations||[]).slice(0,10).map(function(a){
+      return '<div class="fk-card"><div class="fk-kicker">'+esc(a.savedAt)+'</div><strong>'+esc(a.namedHuman||'Unnamed')+'</strong><p class="fk-mini">'+esc(a.trialReviewType||'')+' \u00B7 '+esc(a.realUseWindow||'')+'</p></div>';
+    }).join('') || '<div class="fk-card fk-mini">None saved yet.</div>';
+  }
+
+  // --- Tab: Export ---
+  function renderExport(){
+    var stats = 'Manual pages: '+(FK.manualPages||[]).length+' \u00B7 Tools: '+(FK.tools||[]).length+' \u00B7 Objections: '+(FK.objections||[]).length+' \u00B7 Claim terms: '+(FK.claimRules.bannedTerms||[]).length;
+    var activationCount = (appState.activations||[]).length;
+    var upgradeLink = navigator.onLine ? '<a href="https://sales-toolkit-nikhillinit.replit.app" target="_blank" rel="noopener" class="fk-upgrade-link">\u2197 Open full Restless FieldKit (online)</a>' : '';
+    body('<h3>Export / Reset</h3><div class="fk-card"><div class="fk-kicker">Local state</div><p class="fk-mini">'+activationCount+' saved activation(s). Export before switching devices.</p><button id="fk-export" class="fk-btn" style="margin-top:8px">Download state JSON</button> <button id="fk-reset" class="fk-btn ghost" style="margin-top:8px">Reset local data</button></div><div class="fk-card"><div class="fk-kicker">Compiled app state</div><p class="fk-mini">'+esc(stats)+'</p><p class="fk-mini">Build: '+esc(FK.buildHash||'unknown')+' \u00B7 Generated: '+esc(FK.generatedAt||'unknown')+'</p></div>'+upgradeLink);
+    byId('fk-export').onclick = function(){
+      dl('restless-fieldkit-local-state-'+new Date().toISOString().slice(0,10)+'.json', JSON.stringify(appState,null,2));
+    };
+    byId('fk-reset').onclick = function(){
+      if(confirm('Clear all saved activations and notes for this file? This cannot be undone.')){
+        appState = {activations:[], notes:[]};
+        save(appState);
+        renderExport();
+      }
+    };
+  }
+
+  // --- Init ---
+  render('manual');
+})();
+</script>
