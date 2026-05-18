@@ -5,7 +5,19 @@
 (function () {
   if (window.self === window.top) return; // standalone / print — no-op
 
-  var parentOrigin = window.location.origin;
+  // Trusted parent origins. window.location.origin handles same-origin
+  // embedding (current default); ALLOWED_ORIGINS lets the live Replit app
+  // embed this file from a different host without breaking the bridge.
+  var ALLOWED_ORIGINS = ["https://sales-toolkit.replit.app"];
+  var sameOrigin = window.location.origin;
+  function isTrusted(origin) {
+    return origin === sameOrigin || ALLOWED_ORIGINS.indexOf(origin) !== -1;
+  }
+  // Outbound messages use '*' because the parent's origin isn't known until
+  // it talks to us first. The payload contains no sensitive data — only the
+  // current pageId or a route string — and the receiver does its own origin
+  // check.
+  var parentTarget = '*';
 
   // ── Direction 1: report the most-visible page to the parent app ────────────
   // Picks the intersecting section whose top edge is closest to the viewport
@@ -24,7 +36,7 @@
     var pageId = visible[0].target.id;
     if (pageId === lastReported) return;
     lastReported = pageId;
-    window.parent.postMessage({ type: 'pageVisible', pageId: pageId }, parentOrigin);
+    window.parent.postMessage({ type: 'pageVisible', pageId: pageId }, parentTarget);
   }, { threshold: [0.5] });
 
   pages.forEach(function (p) { observer.observe(p); });
@@ -45,12 +57,12 @@
       type: 'appRoute',
       route: el.getAttribute('data-app-route'),
       context: context,
-    }, parentOrigin);
+    }, parentTarget);
   });
 
   // ── Inbound: scrollToPage (existing, kept inside the IIFE) ────────────────
   window.addEventListener('message', function (e) {
-    if (e.origin !== parentOrigin) return;
+    if (!isTrusted(e.origin)) return;
     if (e.data && e.data.type === 'scrollToPage') {
       var el = document.getElementById(e.data.pageId);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });

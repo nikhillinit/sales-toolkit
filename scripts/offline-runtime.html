@@ -141,6 +141,16 @@
 }
 .fk-upgrade-link:hover { background: #c8ddf0; }
 
+.fk-storage-warn {
+  background: var(--gold-bg, #F8E9B6); border: 1px solid var(--gold, #8A6A14);
+  color: var(--fg, #1A1D22); padding: 10px 12px; margin: 0 0 12px;
+  font-size: 12px; line-height: 1.5; border-radius: 4px;
+}
+.fk-storage-warn strong { color: var(--gold, #8A6A14); display:block; margin-bottom:2px; }
+.fk-storage-warn code { font-family:'JetBrains Mono',monospace; font-size:11px; background:#fff; padding:1px 4px; border-radius:3px; }
+.fk-sync-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+.fk-sync-row .fk-btn { flex:1; min-width:140px; text-align:center; }
+
 @media print {
   #fk-launch, #fk-panel { display: none !important; }
 }
@@ -154,13 +164,86 @@
   var FK = JSON.parse(dataEl.textContent || '{}');
   var storeKey = 'restless-fieldkit-offline-state-v1';
 
+  // --- Config (single source of truth for the live app) ---
+  var PROD_ORIGIN = 'https://sales-toolkit.replit.app';
+  var SYNC_PATH = '/api/sync';
+  var PWA_PATH = '/offline';
+  // ~6KB encoded ceiling — Safari starts choking on URLs past ~8KB; leaves
+  // headroom for the host + path prefix.
+  var SYNC_URL_MAX = 6000;
+
+  // --- Environment detection ---
+  var isFileProtocol = (location.protocol === 'file:');
+
+  // --- Storage with file:// guard ---
+  // Safari/WebKit clears localStorage for file:// origins on tab close.
+  // We try localStorage first; if it throws or fails to round-trip, we
+  // fall back to an in-memory store so the session at least survives the
+  // current tab. The storage banner tells the rep what's at stake.
+  var memoryStore = {};
+  var storageOk = (function(){
+    try {
+      var probe = '__fk_probe__' + Date.now();
+      localStorage.setItem(probe, '1');
+      var ok = localStorage.getItem(probe) === '1';
+      localStorage.removeItem(probe);
+      return ok;
+    } catch (e) { return false; }
+  })();
+  function load(){
+    try {
+      if (storageOk) return JSON.parse(localStorage.getItem(storeKey)||'{}');
+    } catch(e){}
+    try { return JSON.parse(memoryStore[storeKey] || '{}'); } catch(e){ return {}; }
+  }
+  function save(v){
+    var serialized = JSON.stringify(v);
+    memoryStore[storeKey] = serialized;
+    try { if (storageOk) localStorage.setItem(storeKey, serialized); } catch(e){}
+  }
+
   // --- Utilities ---
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
-  function load(){ try { return JSON.parse(localStorage.getItem(storeKey)||'{}'); } catch(e){ return {}; } }
-  function save(v){ try { localStorage.setItem(storeKey, JSON.stringify(v)); } catch(e){} }
   function dl(name, text){ var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:'application/json'})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href); a.remove();}, 100); }
   function byId(id){return document.getElementById(id);}
   function jump(id){ var el=document.getElementById(id); if(el){ el.scrollIntoView({behavior:'smooth', block:'start'}); panel.classList.remove('open'); } }
+
+  // Base64 over UTF-8 (btoa alone breaks on any non-Latin1 char in
+  // free-text capture fields).
+  function b64UrlEncode(str){
+    var bytes = new TextEncoder().encode(str);
+    var bin = '';
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+
+  function buildSyncUrl(activations){
+    // Trim oversized payloads from the oldest end — newest activations are
+    // the ones the rep most needs in the cloud right now.
+    var trimmed = activations.slice();
+    var payload, encoded, url;
+    while (trimmed.length) {
+      payload = { v: 1, source: 'offline-html', generatedAt: new Date().toISOString(), activations: trimmed };
+      encoded = b64UrlEncode(JSON.stringify(payload));
+      url = PROD_ORIGIN + SYNC_PATH + '?payload=' + encoded;
+      if (url.length <= SYNC_URL_MAX) return { url: url, included: trimmed.length, dropped: activations.length - trimmed.length };
+      trimmed.pop();
+    }
+    return { url: null, included: 0, dropped: activations.length };
+  }
+
+  // --- postMessage scroll bridge (drawer ↔ parent app) ---
+  // The blueprint requires the live Replit app to be able to drive scroll
+  // when this file is embedded in an iframe. We accept same-origin AND the
+  // production origin; everything else is dropped.
+  var ALLOWED_PARENT_ORIGINS = [PROD_ORIGIN];
+  window.addEventListener('message', function(e){
+    if (e.origin !== window.location.origin && ALLOWED_PARENT_ORIGINS.indexOf(e.origin) === -1) return;
+    if (e.data && e.data.type === 'scrollToPage') {
+      var el = document.getElementById(e.data.pageId);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
 
   // --- App state ---
   var appState = load();
@@ -329,7 +412,10 @@
       return '<label class="fk-mini"><strong>'+esc(f.label)+'</strong><br><span style="color:var(--muted)">'+esc(f.requiredAnswer)+'</span><input class="fk-input" data-field="'+esc(f.id)+'" placeholder="Required" aria-label="'+esc(f.label)+'" style="margin-top:4px"></label>';
     }).join('');
     var savedCount = (appState.activations||[]).length;
-    body('<h3>Activation Standard</h3><p class="fk-mini">No blanks, no ship. Saved locally in this browser.</p>'+fields+'<button id="fk-save-act" class="fk-btn" style="margin-top:12px">Save activation</button><div id="fk-act-feedback"></div><h3 style="margin-top:20px">Saved ('+savedCount+')</h3><div id="fk-act-list"></div>');
+    var inlineWarn = (isFileProtocol || !storageOk)
+      ? '<div class="fk-storage-warn" style="margin-top:8px"><strong>Saving may not survive tab close.</strong>See the Export tab for cloud sync and Home-Screen install instructions.</div>'
+      : '';
+    body('<h3>Activation Standard</h3><p class="fk-mini">No blanks, no ship. Saved locally in this browser.</p>'+inlineWarn+fields+'<button id="fk-save-act" class="fk-btn" style="margin-top:12px">Save activation</button><div id="fk-act-feedback"></div><h3 style="margin-top:20px">Saved ('+savedCount+')</h3><div id="fk-act-list"></div>');
 
     byId('fk-save-act').onclick = function(){
       var obj = {id: Date.now(), savedAt: new Date().toISOString()};
@@ -358,9 +444,77 @@
   // --- Tab: Export ---
   function renderExport(){
     var stats = 'Manual pages: '+(FK.manualPages||[]).length+' \u00B7 Tools: '+(FK.tools||[]).length+' \u00B7 Objections: '+(FK.objections||[]).length+' \u00B7 Claim terms: '+(FK.claimRules.bannedTerms||[]).length;
-    var activationCount = (appState.activations||[]).length;
-    var upgradeLink = navigator.onLine ? '<a href="https://sales-toolkit-nikhillinit.replit.app" target="_blank" rel="noopener" class="fk-upgrade-link">\u2197 Open full Restless FieldKit (online)</a>' : '';
-    body('<h3>Export / Reset</h3><div class="fk-card"><div class="fk-kicker">Local state</div><p class="fk-mini">'+activationCount+' saved activation(s). Export before switching devices.</p><button id="fk-export" class="fk-btn" style="margin-top:8px">Download state JSON</button> <button id="fk-reset" class="fk-btn ghost" style="margin-top:8px">Reset local data</button></div><div class="fk-card"><div class="fk-kicker">Compiled app state</div><p class="fk-mini">'+esc(stats)+'</p><p class="fk-mini">Build: '+esc(FK.buildHash||'unknown')+' \u00B7 Generated: '+esc(FK.generatedAt||'unknown')+'</p></div>'+upgradeLink);
+    var activations = appState.activations || [];
+    var activationCount = activations.length;
+
+    // Storage-loss warning. Shown when:
+    //   (a) the page is on file:// (Safari clears localStorage on close), OR
+    //   (b) the storage probe failed (private browsing, locked-down profile).
+    var storageWarn = '';
+    if (isFileProtocol || !storageOk) {
+      var reason = isFileProtocol
+        ? 'You opened this file directly (<code>file://</code>). Browsers \u2014 especially Safari on iPad \u2014 may erase saved activations when this tab closes.'
+        : 'This browser blocked local storage. Activations will only survive the current tab.';
+      storageWarn =
+        '<div class="fk-storage-warn">'+
+          '<strong>Data may not persist between sessions.</strong>'+
+          reason+
+          ' <br><br>Fix: open <code>'+esc(PROD_ORIGIN)+esc(PWA_PATH)+'</code> in the browser and tap <strong>Add to Home Screen</strong>. The installed app caches offline and keeps data permanently.'+
+        '</div>';
+    }
+
+    // Sync-link block: encodes activations into a URL the rep can tap once
+    // they reconnect. Always rendered (works offline too \u2014 we just can't
+    // navigate to it until network returns).
+    var syncBlock = '';
+    if (activationCount > 0) {
+      var built = buildSyncUrl(activations);
+      if (built.url) {
+        var droppedNote = built.dropped > 0
+          ? '<p class="fk-mini" style="color:var(--brick)">Payload trimmed \u2014 '+built.dropped+' older activation(s) excluded. Download JSON for the full record.</p>'
+          : '';
+        syncBlock =
+          '<div class="fk-card">'+
+            '<div class="fk-kicker">Cloud sync</div>'+
+            '<p class="fk-mini">Send '+built.included+' activation(s) to the live Restless FieldKit. Opens the cloud app, which decodes the payload and imports under your account.</p>'+
+            droppedNote+
+            '<div class="fk-sync-row">'+
+              '<a id="fk-sync-open" href="'+esc(built.url)+'" target="_blank" rel="noopener" class="fk-btn">Sync to Cloud CRM \u2197</a>'+
+              '<button id="fk-sync-copy" class="fk-btn ghost">Copy sync link</button>'+
+            '</div>'+
+            '<p class="fk-mini" id="fk-sync-status" aria-live="polite" style="margin-top:6px"></p>'+
+          '</div>';
+      } else {
+        syncBlock =
+          '<div class="fk-card">'+
+            '<div class="fk-kicker">Cloud sync</div>'+
+            '<p class="fk-mini">Too much data to fit in a sync link (>'+SYNC_URL_MAX+' chars). Download the JSON below and import it from Settings on the live app.</p>'+
+          '</div>';
+      }
+    }
+
+    var upgradeLink = navigator.onLine
+      ? '<a href="'+esc(PROD_ORIGIN)+'" target="_blank" rel="noopener" class="fk-upgrade-link">\u2197 Open full Restless FieldKit (online)</a>'
+      : '';
+
+    body(
+      '<h3>Export / Reset</h3>'+
+      storageWarn+
+      '<div class="fk-card">'+
+        '<div class="fk-kicker">Local state</div>'+
+        '<p class="fk-mini">'+activationCount+' saved activation(s).</p>'+
+        '<button id="fk-export" class="fk-btn" style="margin-top:8px">Download state JSON</button> '+
+        '<button id="fk-reset" class="fk-btn ghost" style="margin-top:8px">Reset local data</button>'+
+      '</div>'+
+      syncBlock+
+      '<div class="fk-card">'+
+        '<div class="fk-kicker">Compiled app state</div>'+
+        '<p class="fk-mini">'+esc(stats)+'</p>'+
+        '<p class="fk-mini">Build: '+esc(FK.buildHash||'unknown')+' \u00B7 Generated: '+esc(FK.generatedAt||'unknown')+'</p>'+
+      '</div>'+
+      upgradeLink
+    );
+
     byId('fk-export').onclick = function(){
       dl('restless-fieldkit-local-state-'+new Date().toISOString().slice(0,10)+'.json', JSON.stringify(appState,null,2));
     };
@@ -371,6 +525,30 @@
         renderExport();
       }
     };
+
+    var copyBtn = byId('fk-sync-copy');
+    if (copyBtn) {
+      copyBtn.onclick = function(){
+        var built = buildSyncUrl(appState.activations || []);
+        var status = byId('fk-sync-status');
+        if (!built.url) { if (status) status.textContent = 'Nothing to sync.'; return; }
+        var done = function(){
+          if (status) status.textContent = '\u2713 Sync link copied. Paste it in any browser once back online.';
+          copyBtn.textContent = '\u2713 Copied';
+          setTimeout(function(){ copyBtn.textContent = 'Copy sync link'; }, 2000);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(built.url).then(done, function(){
+            // Fallback for browsers that block clipboard on file://
+            window.prompt('Copy this sync link:', built.url);
+            done();
+          });
+        } else {
+          window.prompt('Copy this sync link:', built.url);
+          done();
+        }
+      };
+    }
   }
 
   // --- Init ---

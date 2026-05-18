@@ -16,6 +16,16 @@ async function startServer() {
       ? path.resolve(__dirname, "public")
       : path.resolve(__dirname, "..", "dist", "public");
 
+  // /offline is the "Add to Home Screen" entry point — a single-file HTML
+  // toolkit that caches and runs without network. Served BEFORE the static
+  // middleware so the canonical artifact wins over any SPA fallback.
+  const OFFLINE_HTML = path.join(staticPath, "offline", "Restless_FieldKit_Offline_v4.2.html");
+  const serveOffline = (_req: express.Request, res: express.Response) => {
+    res.sendFile(OFFLINE_HTML);
+  };
+  app.get("/offline", serveOffline);
+  app.get("/offline/", serveOffline);
+
   app.use(express.static(staticPath));
 
   // Handle client-side routing - serve index.html for all routes

@@ -6,8 +6,9 @@ The Restless FieldKit has two delivery modes:
 
 | Mode | Entry point | Network required | Build script |
 |------|-------------|-----------------|--------------|
-| **Hosted** | `sales-toolkit-nikhillinit.replit.app` | Yes | `build-manual.mjs` |
-| **Offline** | `Restless_FieldKit_Offline_v4.2.html` | No | `build-offline-delivery.mjs` |
+| **Hosted** | `sales-toolkit.replit.app` | Yes | `build-manual.mjs` |
+| **PWA** | `sales-toolkit.replit.app/offline` (Add to Home Screen) | First load only | `build-offline-delivery.mjs` |
+| **Standalone HTML** | `Restless_FieldKit_Offline_v4.2.html` (email / Slack / AirDrop) | No | `build-offline-delivery.mjs` |
 
 The offline artifact is a single HTML file that contains:
 
@@ -66,7 +67,38 @@ pnpm build:manual:all
 
 ## Upgrading to Hosted
 
-When the rep has network access, the Export tab shows an "Open full Restless FieldKit (online)" link that opens the hosted app. This link only appears when `navigator.onLine` is true.
+When the rep has network access, the Export tab shows an "Open full Restless FieldKit (online)" link that opens the hosted app at `sales-toolkit.replit.app`. This link only appears when `navigator.onLine` is true.
+
+## Cloud sync (no JSON files required)
+
+The Export tab also generates a **Sync to Cloud CRM** link. The button URL-encodes the rep's saved activations (base64url over UTF-8) into a query string that targets `https://sales-toolkit.replit.app/api/sync?payload=…`.
+
+Workflow:
+
+1. Rep logs an activation while offline.
+2. When network returns, they tap **Sync to Cloud CRM ↗** (or **Copy sync link** if they want to paste it elsewhere — e.g. Notes, Slack, email-to-self).
+3. The live app's `/api/sync` route (React page `client/src/pages/SyncImport.tsx`) decodes the payload, shows a review screen, and imports the activations as Trials into IndexedDB on confirm.
+
+Constraints handled in the runtime:
+
+- Payload is trimmed (oldest first) to stay under ~6KB encoded so iOS Safari doesn't drop the URL.
+- If the payload is too large to fit, the rep is told to use the JSON download instead.
+- The link decodes UTF-8 cleanly (so non-Latin characters in capture fields don't break `btoa`).
+
+## Add to Home Screen (PWA path)
+
+The blueprint's "real" fix for the file:// storage trap: instruct reps to load `https://sales-toolkit.replit.app/offline` on their iPad and tap **Add to Home Screen**. Because the page is now installed under the `https://` origin (not `file://`), Safari preserves IndexedDB and localStorage permanently.
+
+Server wiring:
+
+- `server/index.ts` registers `/offline` and `/offline/` to send the offline HTML before the SPA fallback.
+- `vite.config.ts` mirrors the same alias for `pnpm dev`.
+- The PWA service worker precaches the offline HTML (it matches the `**/*.html` glob).
+- `/offline` and `/api/*` are added to `navigateFallbackDenylist` so the SW never substitutes the SPA shell for them.
+
+## postMessage origin allowlist
+
+The scroll bridge inside the manual (`attached_assets/manual/v4_2.html` and `scripts/manual-bridge.html`) now accepts messages from `window.location.origin` **or** `https://sales-toolkit.replit.app`. The hosted iframe still defaults to same-origin embedding; the allowlist exists so a cross-origin embed (e.g. a future white-labeled lane) doesn't silently break. Outbound messages from the bridge use `'*'` as the targetOrigin because the parent's origin isn't known until it talks first; the payload only contains a pageId/route string.
 
 ## Updating the State
 
@@ -80,6 +112,7 @@ When the manual or app data changes:
 
 - **`window.self === window.top` is NOT used as a guard** — the offline runtime always injects because the file is designed to be opened standalone. The hosted build uses `build-manual.mjs` (a separate script) which injects the iframe bridge instead.
 - **`@media print` hides the panel** — the manual stays a clean print artifact even with the runtime present.
-- **localStorage, not IndexedDB** — simpler, no async, works in every browser including file:// protocol.
-- **No service worker** — the file is already offline. A SW would add complexity with no benefit.
+- **localStorage, with in-memory fallback** — simpler than IndexedDB, no async, works on `file://`. A startup probe writes/reads a sentinel; if it fails (private browsing, locked profile) the runtime silently demotes to a per-session in-memory store and surfaces a yellow warning banner on the Activation and Export tabs telling the rep their data won't survive tab close.
+- **`file://` detection** — `location.protocol === 'file:'` triggers the same banner because WebKit clears localStorage on tab close for local files. The banner points reps at `/offline` + Add to Home Screen as the durable fix.
+- **No service worker inside the standalone HTML** — the file is already offline. The hosted PWA at `/offline` is what gives the rep persistent storage; the standalone HTML stays scriptless beyond the inline runtime.
 - **Escape key closes the panel** — standard UX pattern for slide-out panels.
