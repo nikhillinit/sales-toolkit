@@ -30,6 +30,7 @@ function Router() {
       <Route path="/os" component={() => <RedirectTo path="/os/prepare" />} />
       <Route path="/os/:step" component={Home} />
       <Route path="/manual" component={Home} />
+      <Route path="/manual/:pageId" component={Home} />
       <Route path="/scanner" component={Home} />
       <Route path="/lane" component={Home} />
       <Route path="/network" component={Home} />

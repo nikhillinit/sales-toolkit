@@ -165,10 +165,12 @@ function AppShell() {
       <main
         style={{
           flex: 1,
-          overflowY: 'auto',
+          overflowY: activeTab === 'manual' ? 'hidden' : 'auto',
           overflowX: 'hidden',
-          paddingBottom: activeTab === 'os' ? '72px' : (activeTab === 'lane' || activeTab === 'roleplay' || activeTab === 'story') ? '0' : '16px',
+          paddingBottom: activeTab === 'os' ? '72px' : (activeTab === 'lane' || activeTab === 'roleplay' || activeTab === 'story' || activeTab === 'manual') ? '0' : '16px',
           WebkitOverflowScrolling: 'touch',
+          display: activeTab === 'manual' ? 'flex' : undefined,
+          flexDirection: activeTab === 'manual' ? 'column' as const : undefined,
         }}
       >
         <Suspense fallback={<SectionLoading />}>
