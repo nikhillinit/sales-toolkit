@@ -9,7 +9,10 @@
     "start": "NODE_ENV=production node dist/index.js",
     "preview": "vite preview --host",
     "check": "tsc --noEmit",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "build:manual": "node scripts/build-manual.mjs",
+    "prebuild": "node scripts/build-manual.mjs",
+    "predev": "node scripts/build-manual.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

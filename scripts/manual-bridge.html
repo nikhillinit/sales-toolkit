@@ -1,0 +1,60 @@
+<!-- Restless bidirectional bridge — injected by scripts/build-manual.mjs at build time.
+     NOT present in the canonical attached_assets/ copy (clean print artifact).
+     Guard: no-ops when the file is opened standalone (window.self === window.top). -->
+<script>
+(function () {
+  if (window.self === window.top) return; // standalone / print — no-op
+
+  var parentOrigin = window.location.origin;
+
+  // ── Direction 1: report the most-visible page to the parent app ────────────
+  // Picks the intersecting section whose top edge is closest to the viewport
+  // top, so the correct page is reported even when two pages are partially
+  // visible during a slow scroll.
+  var pages = document.querySelectorAll('section[id^="p"]');
+  var lastReported = null;
+
+  var observer = new IntersectionObserver(function (entries) {
+    var visible = entries
+      .filter(function (e) { return e.isIntersecting; })
+      .sort(function (a, b) {
+        return Math.abs(a.boundingClientRect.top) - Math.abs(b.boundingClientRect.top);
+      });
+    if (!visible.length) return;
+    var pageId = visible[0].target.id;
+    if (pageId === lastReported) return;
+    lastReported = pageId;
+    window.parent.postMessage({ type: 'pageVisible', pageId: pageId }, parentOrigin);
+  }, { threshold: [0.5] });
+
+  pages.forEach(function (p) { observer.observe(p); });
+
+  // ── Direction 3: intercept data-app-route clicks ───────────────────────────
+  // Any element with data-app-route="<path>" fires an appRoute message.
+  // Optional data-app-context='{"prefill":{...}}' carries structured context.
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-app-route]');
+    if (!el) return;
+    e.preventDefault();
+    var context = null;
+    try {
+      var raw = el.getAttribute('data-app-context');
+      if (raw) context = JSON.parse(raw);
+    } catch (_) { /* malformed context — send route only */ }
+    window.parent.postMessage({
+      type: 'appRoute',
+      route: el.getAttribute('data-app-route'),
+      context: context,
+    }, parentOrigin);
+  });
+
+  // ── Inbound: scrollToPage (existing, kept inside the IIFE) ────────────────
+  window.addEventListener('message', function (e) {
+    if (e.origin !== parentOrigin) return;
+    if (e.data && e.data.type === 'scrollToPage') {
+      var el = document.getElementById(e.data.pageId);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+})();
+</script>
