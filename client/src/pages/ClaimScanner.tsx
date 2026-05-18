@@ -7,10 +7,28 @@
  */
 import { findBannedTerms, BANNED_TERMS } from '@/lib/claimScanner';
 import { scanForClaims, HARD_CLAIMS, type ClaimHit } from '@shared/claims';
-import { useState } from 'react';
+import { readManualCTAContext } from '@shared/objections';
+import { useEffect, useRef, useState } from 'react';
 
 export default function ClaimScanner() {
   const [input, setInput] = useState('');
+
+  // Prefill from manual CTA — fires once on mount
+  const prefillApplied = useRef(false);
+  useEffect(() => {
+    if (prefillApplied.current) return;
+    prefillApplied.current = true;
+    const ctx = readManualCTAContext();
+    if (!ctx?.prefill) return;
+    // buyerWords → scanner input (the phrase the rep wants to check)
+    if (ctx.prefill.buyerWords) {
+      setInput(ctx.prefill.buyerWords);
+      setTimeout(() => {
+        document.getElementById('claim-input')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.getElementById('claim-input')?.focus();
+      }, 200);
+    }
+  }, []);
 
   // Layer 1: broad banned-term scan
   const matches = input.trim() ? findBannedTerms(input) : [];

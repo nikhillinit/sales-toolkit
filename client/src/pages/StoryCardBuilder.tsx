@@ -5,11 +5,12 @@
  *
  * Design: matches NetworkTracker/ClaimScanner inline-style convention.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Copy, Edit2, Search, Trash2 } from 'lucide-react';
 import { useToastActions } from '@/contexts/AppState';
 import { useStoryVaultContext } from '@/contexts/StoryVaultContext';
 import { generateScripts, type StoryCard } from '@/lib/storyVault';
+import { readManualCTAContext } from '@shared/objections';
 
 type FormState = {
   title: string;
@@ -69,6 +70,25 @@ export default function StoryCardBuilder() {
   const [editingStory, setEditingStory] = useState<StoryCard | null>(null);
   const [form, setForm] = useState<FormState>(BLANK_FORM);
   const [search, setSearch] = useState('');
+
+  // Prefill from manual CTA — fires once on mount
+  const prefillApplied = useRef(false);
+  useEffect(() => {
+    if (prefillApplied.current) return;
+    prefillApplied.current = true;
+    const ctx = readManualCTAContext();
+    if (!ctx?.prefill) return;
+    // buyerWords → context field ("what was happening / the use window")
+    if (ctx.prefill.buyerWords) {
+      setForm(prev => ({ ...prev, context: ctx.prefill!.buyerWords! }));
+    }
+    // Ensure build tab is active and scroll title field into view
+    setActiveTab('build');
+    setTimeout(() => {
+      document.getElementById('story-title')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById('story-title')?.focus();
+    }, 250);
+  }, []);
 
   useEffect(() => {
     if (editingStory) {
