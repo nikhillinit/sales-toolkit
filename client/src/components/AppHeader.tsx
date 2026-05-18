@@ -2,11 +2,11 @@
  * AppHeader — Unified Signal OS
  * Sticky top header: brand, version, pipeline stats summary.
  */
-import { useAppState } from '@/contexts/AppState';
+import { useStatsState, useTrialsState } from '@/contexts/AppState';
 
 export default function AppHeader() {
-  const { state } = useAppState();
-  const s = state.stats;
+  const stats = useStatsState();
+  const trials = useTrialsState();
 
   return (
     <header
@@ -69,24 +69,24 @@ export default function AppHeader() {
       >
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
           <span style={{ color: '#4A5159', fontSize: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Out</span>
-          <span style={{ color: '#1A1D22', fontSize: '14px' }}>{s.out}</span>
+          <span style={{ color: '#1A1D22', fontSize: '14px' }}>{stats.out}</span>
         </div>
         <div style={{ width: '1px', background: '#C8CCD2', margin: '4px 0' }} />
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
           <span style={{ color: '#4A5159', fontSize: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ship</span>
-          <span style={{ color: '#A82820', fontSize: '14px' }}>{s.ship}</span>
+          <span style={{ color: '#A82820', fontSize: '14px' }}>{stats.ship}</span>
         </div>
         <div style={{ width: '1px', background: '#C8CCD2', margin: '4px 0' }} />
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
           <span style={{ color: '#4A5159', fontSize: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Yes</span>
-          <span style={{ color: '#2E7D32', fontSize: '14px' }}>{s.yes}</span>
+          <span style={{ color: '#2E7D32', fontSize: '14px' }}>{stats.yes}</span>
         </div>
-        {state.trials.length > 0 && (
+        {trials.length > 0 && (
           <>
             <div style={{ width: '1px', background: '#C8CCD2', margin: '4px 0' }} />
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
               <span style={{ color: '#4A5159', fontSize: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Live</span>
-              <span style={{ color: '#8A6A14', fontSize: '14px' }}>{state.trials.length}</span>
+              <span style={{ color: '#8A6A14', fontSize: '14px' }}>{trials.length}</span>
             </div>
           </>
         )}

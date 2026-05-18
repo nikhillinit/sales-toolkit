@@ -3,7 +3,8 @@
  * 5-tab bottom navigation matching the 5-step sales OS.
  * Thumb-first, 64px tall, absolute positioned within app shell.
  */
-import { useAppState, type StepId } from '@/contexts/AppState';
+import { useUiState, type StepId } from '@/contexts/AppState';
+import { useLocation } from 'wouter';
 
 interface Tab {
   id: StepId;
@@ -20,8 +21,9 @@ const TABS: Tab[] = [
 ];
 
 export default function BottomNav() {
-  const { state, switchStep } = useAppState();
-  const completed = new Set(state.completedSteps);
+  const { currentStep, completedSteps } = useUiState();
+  const [, setLocation] = useLocation();
+  const completed = new Set(completedSteps);
 
   return (
     <nav
@@ -40,12 +42,12 @@ export default function BottomNav() {
       aria-label="Sales OS navigation"
     >
       {TABS.map(tab => {
-        const isActive = state.currentStep === tab.id;
+        const isActive = currentStep === tab.id;
         const isDone = completed.has(tab.id);
         return (
           <button
             key={tab.id}
-            onClick={() => switchStep(tab.id)}
+            onClick={() => setLocation(`/os/${tab.id}`)}
             aria-current={isActive ? 'page' : undefined}
             style={{
               flex: 1,

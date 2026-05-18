@@ -3,8 +3,17 @@
  * 8-field Activation Standard. All 8 required before ship.
  * Unified Signal OS design system.
  */
-import { useAppState, type Trial } from '@/contexts/AppState';
+import {
+  useDraftActions,
+  useDraftState,
+  useStatsActions,
+  useToastActions,
+  useTrialActions,
+  useUiActions,
+  type Trial,
+} from '@/contexts/AppState';
 import { useEffect, useState } from 'react';
+import { useLocation } from 'wouter';
 
 interface FieldDef {
   id: string;
@@ -46,12 +55,18 @@ const OPTIONAL_FIELDS: FieldDef[] = [
 const ALL_REQUIRED_IDS = ACTIVATION_FIELDS.filter(f => f.required).map(f => f.id);
 
 export default function Activate() {
-  const { state, addTrial, markStepComplete, modStat, setGearsLocked, updateFormDraft, saveDraft, switchStep, toast } = useAppState();
+  const { formDraft } = useDraftState();
+  const { updateFormDraft, saveDraft } = useDraftActions();
+  const { addTrial } = useTrialActions();
+  const { markStepComplete, setGearsLocked } = useUiActions();
+  const { modStat } = useStatsActions();
+  const { toast } = useToastActions();
+  const [, setLocation] = useLocation();
   const [values, setValues] = useState<Record<string, string>>({});
 
   // Restore from draft
   useEffect(() => {
-    const draft = state.formDraft;
+    const draft = formDraft;
     const restored: Record<string, string> = {};
     [...ACTIVATION_FIELDS, ...OPTIONAL_FIELDS].forEach(f => {
       if (typeof draft[f.id] === 'string') restored[f.id] = draft[f.id] as string;
@@ -108,7 +123,7 @@ export default function Activate() {
     // Unlock gears for next call
     setGearsLocked(false);
     saveDraft();
-    switchStep('followup');
+    setLocation('/os/followup');
     toast(`✅ Code ${trial.code} Shipped & Pipeline Saved.`);
   };
 

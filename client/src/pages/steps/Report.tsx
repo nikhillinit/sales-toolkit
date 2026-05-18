@@ -3,7 +3,7 @@
  * Weekly scoreboard + 1:1 agenda builder + quality gate + sample report. Copy to clipboard.
  * Unified Signal OS design system.
  */
-import { useAppState, type Stats } from '@/contexts/AppState';
+import { useDraftActions, useStatsActions, useStatsState, useToastActions, type Stats } from '@/contexts/AppState';
 import { useState } from 'react';
 
 const STAT_DEFS: { key: keyof Stats; label: string; color?: string; sub: string }[] = [
@@ -27,7 +27,10 @@ const QUALITY_GATE = [
 ];
 
 export default function Report() {
-  const { state, modStat, saveDraft, toast } = useAppState();
+  const stats = useStatsState();
+  const { modStat } = useStatsActions();
+  const { saveDraft } = useDraftActions();
+  const { toast } = useToastActions();
   const [phrase, setPhrase] = useState('');
   const [move, setMove] = useState('');
   const [cleanNo, setCleanNo] = useState('');
@@ -46,7 +49,7 @@ export default function Report() {
   const gateAllPass = gateChecked.every(Boolean);
 
   const handleCopyWeekly = () => {
-    const s = state.stats;
+    const s = stats;
     const report =
       `# Restless Weekly Progress Report\n\n` +
       `## 1. Scoreboard — Six Numbers\n` +
@@ -83,7 +86,7 @@ export default function Report() {
   const handleResetStats = () => {
     if (!confirm('Reset all stats to zero?')) return;
     STAT_DEFS.forEach(({ key }) => {
-      const current = state.stats[key] || 0;
+      const current = stats[key] || 0;
       if (current > 0) modStat(key, -current);
     });
     saveDraft();
@@ -166,7 +169,7 @@ export default function Report() {
                 fontFamily: "'JetBrains Mono', monospace", fontWeight: 700,
                 width: '32px', textAlign: 'center', fontSize: '16px', color: color || '#1A1D22',
               }}>
-                {state.stats[key] || 0}
+                {stats[key] || 0}
               </span>
               <button
                 onClick={() => { modStat(key, 1); saveDraft(); }}

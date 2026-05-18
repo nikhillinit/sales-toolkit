@@ -3,8 +3,9 @@
  * Four-Gear Protocol. Lock gears to proceed to Activation.
  * Unified Signal OS design system.
  */
-import { useAppState } from '@/contexts/AppState';
+import { useDraftActions, useDraftState, useStatsActions, useToastActions, useUiActions, useUiState } from '@/contexts/AppState';
 import { useEffect, useState } from 'react';
+import { useLocation } from 'wouter';
 
 const GEARS = [
   {
@@ -38,13 +39,19 @@ const GEARS = [
 ];
 
 export default function Qualify() {
-  const { state, setGearsLocked, markStepComplete, modStat, switchStep, updateFormDraft, saveDraft, toast } = useAppState();
+  const { gearsLocked } = useUiState();
+  const { setGearsLocked, markStepComplete } = useUiActions();
+  const { modStat } = useStatsActions();
+  const { formDraft } = useDraftState();
+  const { updateFormDraft, saveDraft } = useDraftActions();
+  const { toast } = useToastActions();
+  const [, setLocation] = useLocation();
   const [gearValues, setGearValues] = useState<Record<string, string>>({});
-  const locked = state.gearsLocked;
+  const locked = gearsLocked;
 
   // Restore from draft
   useEffect(() => {
-    const draft = state.formDraft;
+    const draft = formDraft;
     const restored: Record<string, string> = {};
     GEARS.forEach(g => {
       if (typeof draft[g.id] === 'string') restored[g.id] = draft[g.id] as string;
@@ -71,7 +78,7 @@ export default function Qualify() {
     markStepComplete('qualify');
     modStat('qual', 1);
     saveDraft();
-    switchStep('activate');
+    setLocation('/os/activate');
     toast('Gears Locked. Proceed to Activation Standard.');
   };
 

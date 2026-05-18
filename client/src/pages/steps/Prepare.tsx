@@ -3,8 +3,9 @@
  * Pre-call checklist. Rep must check all 3 boxes before proceeding.
  * Unified Signal OS design system.
  */
-import { useAppState } from '@/contexts/AppState';
+import { useDraftActions, useDraftState, useToastActions, useUiActions } from '@/contexts/AppState';
 import { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'wouter';
 
 const CHECKLIST = [
   { id: 'prep-obj',   label: 'Objective clear: what am I asking for today?' },
@@ -15,14 +16,18 @@ const CHECKLIST = [
 const PREP_NOTES_KEY = 'prep-notes';
 
 export default function Prepare() {
-  const { state, markStepComplete, switchStep, updateFormDraft, saveDraft, toast } = useAppState();
+  const { formDraft } = useDraftState();
+  const { updateFormDraft, saveDraft } = useDraftActions();
+  const { markStepComplete } = useUiActions();
+  const { toast } = useToastActions();
+  const [, setLocation] = useLocation();
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState('');
   const notesRef = useRef<HTMLTextAreaElement>(null);
 
   // Restore from draft
   useEffect(() => {
-    const draft = state.formDraft;
+    const draft = formDraft;
     const restoredChecked: Record<string, boolean> = {};
     CHECKLIST.forEach(item => {
       if (typeof draft[item.id] === 'boolean') restoredChecked[item.id] = draft[item.id] as boolean;
@@ -43,7 +48,7 @@ export default function Prepare() {
     if (!allChecked) return;
     markStepComplete('prepare');
     saveDraft();
-    switchStep('qualify');
+    setLocation('/os/qualify');
     toast('Prepare complete. Proceeding to Qualify.');
   };
 

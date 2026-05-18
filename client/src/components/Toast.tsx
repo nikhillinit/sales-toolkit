@@ -2,11 +2,11 @@
  * Toast — Unified Signal OS
  * Fixed bottom-left notification for state changes.
  */
-import { useAppState } from '@/contexts/AppState';
+import { useToastMessage } from '@/contexts/AppState';
 import { useEffect, useState } from 'react';
 
 export default function Toast() {
-  const { toastMessage } = useAppState();
+  const toastMessage = useToastMessage();
   const [visible, setVisible] = useState(false);
   const [text, setText] = useState('');
 

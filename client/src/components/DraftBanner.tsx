@@ -2,10 +2,12 @@
  * DraftBanner — Unified Signal OS
  * Appears when a session draft exists. Restore or discard.
  */
-import { useAppState } from '@/contexts/AppState';
+import { useDraftActions, useDraftState, useToastActions } from '@/contexts/AppState';
 
 export default function DraftBanner() {
-  const { hasDraft, restoreDraft, discardDraft, toast } = useAppState();
+  const { hasDraft } = useDraftState();
+  const { restoreDraft, discardDraft } = useDraftActions();
+  const { toast } = useToastActions();
 
   if (!hasDraft) return null;
 

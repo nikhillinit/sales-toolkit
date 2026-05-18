@@ -3,7 +3,7 @@
  * Active trial pipeline. Select trial, log outcome, copy CRM note.
  * Unified Signal OS design system.
  */
-import { useAppState, type Trial } from '@/contexts/AppState';
+import { useDraftActions, useToastActions, useTrialActions, useTrialsState, useUiActions, type Trial } from '@/contexts/AppState';
 import { useState } from 'react';
 
 const OUTCOMES = [
@@ -18,12 +18,15 @@ const OUTCOMES = [
 ];
 
 export default function FollowUp() {
-  const { state, closeTrial, markStepComplete, saveDraft, toast } = useAppState();
+  const trials = useTrialsState();
+  const { closeTrial } = useTrialActions();
+  const { markStepComplete } = useUiActions();
+  const { saveDraft } = useDraftActions();
+  const { toast } = useToastActions();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [outcome, setOutcome] = useState('');
   const [notes, setNotes] = useState('');
 
-  const trials = state.trials;
   const selectedTrial = trials.find(t => t.id === selectedId) ?? null;
 
   const handleClose = () => {

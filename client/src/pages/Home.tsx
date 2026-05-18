@@ -7,11 +7,10 @@ import AppHeader from '@/components/AppHeader';
 import BottomNav from '@/components/BottomNav';
 import DraftBanner from '@/components/DraftBanner';
 import Toast from '@/components/Toast';
-import { useAppState } from '@/contexts/AppState';
-import { useState } from 'react';
-import ClaimScanner from './ClaimScanner';
-import LaneSelector from './LaneSelector';
-import FieldManual from './FieldManual';
+import { useUiActions, useUiState, type StepId } from '@/contexts/AppState';
+import { BookOpen, Compass, Search, Zap, type LucideIcon } from 'lucide-react';
+import { lazy, Suspense, useEffect } from 'react';
+import { useLocation } from 'wouter';
 import Activate from './steps/Activate';
 import FollowUp from './steps/FollowUp';
 import Prepare from './steps/Prepare';
@@ -20,12 +19,63 @@ import Report from './steps/Report';
 
 type SecondaryTab = 'os' | 'manual' | 'scanner' | 'lane';
 
+const ClaimScanner = lazy(() => import('./ClaimScanner'));
+const FieldManual = lazy(() => import('./FieldManual'));
+const LaneSelector = lazy(() => import('./LaneSelector'));
+
+const STEP_IDS: StepId[] = ['prepare', 'qualify', 'activate', 'followup', 'report'];
+
+const SECONDARY_TABS: { id: SecondaryTab; label: string; Icon: LucideIcon; path: string }[] = [
+  { id: 'os',      label: 'Sales OS',     Icon: Zap,      path: '/os/prepare' },
+  { id: 'manual',  label: 'Field Manual', Icon: BookOpen, path: '/manual' },
+  { id: 'scanner', label: 'Claim Check',  Icon: Search,   path: '/scanner' },
+  { id: 'lane',    label: 'Lane Plan',    Icon: Compass,  path: '/lane' },
+];
+
+function isSecondaryTab(value: string | undefined): value is SecondaryTab {
+  return value === 'os' || value === 'manual' || value === 'scanner' || value === 'lane';
+}
+
+function isStepId(value: string | undefined): value is StepId {
+  return STEP_IDS.includes(value as StepId);
+}
+
+function parseRoute(path: string): { activeTab: SecondaryTab; activeStep: StepId } {
+  const [section, step] = path.replace(/^\/+/, '').split('/');
+  if (section === 'os') {
+    return { activeTab: 'os', activeStep: isStepId(step) ? step : 'prepare' };
+  }
+  return { activeTab: isSecondaryTab(section) ? section : 'os', activeStep: 'prepare' };
+}
+
+function SectionLoading() {
+  return (
+    <div style={{ padding: '18px', fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: '#4A5159' }}>
+      Loading section...
+    </div>
+  );
+}
+
 function AppShell() {
-  const { state } = useAppState();
-  const [secondaryTab, setSecondaryTab] = useState<SecondaryTab>('os');
+  const [location, setLocation] = useLocation();
+  const { currentStep } = useUiState();
+  const { switchStep } = useUiActions();
+  const { activeTab, activeStep } = parseRoute(location);
+
+  useEffect(() => {
+    if (activeTab === 'os' && currentStep !== activeStep) {
+      switchStep(activeStep);
+    }
+  }, [activeStep, activeTab, currentStep, switchStep]);
+
+  useEffect(() => {
+    if (location === '/os' || (activeTab === 'os' && !isStepId(location.split('/')[2]))) {
+      setLocation('/os/prepare');
+    }
+  }, [activeTab, location, setLocation]);
 
   const renderStep = () => {
-    switch (state.currentStep) {
+    switch (activeStep) {
       case 'prepare':  return <Prepare />;
       case 'qualify':  return <Qualify />;
       case 'activate': return <Activate />;
@@ -64,27 +114,26 @@ function AppShell() {
           scrollbarWidth: 'none',
         }}
       >
-        {([
-          { id: 'os' as SecondaryTab,      label: 'Sales OS',     icon: '⚡' },
-          { id: 'manual' as SecondaryTab,  label: 'Field Manual', icon: '📖' },
-          { id: 'scanner' as SecondaryTab, label: 'Claim Check',  icon: '🔍' },
-          { id: 'lane' as SecondaryTab,    label: 'Lane Plan',    icon: '🧭' },
-        ] as const).map(tab => (
+        {SECONDARY_TABS.map(tab => {
+          const Icon = tab.Icon;
+          const isActive = activeTab === tab.id;
+          return (
           <button
             key={tab.id}
-            onClick={() => setSecondaryTab(tab.id)}
+            onClick={() => setLocation(tab.id === 'os' ? `/os/${currentStep}` : tab.path)}
+            aria-current={isActive ? 'page' : undefined}
             style={{
               flex: 1,
               padding: '10px 4px',
               border: 'none',
-              borderBottom: `2px solid ${secondaryTab === tab.id ? '#A82820' : 'transparent'}`,
-              background: secondaryTab === tab.id ? '#FBF8F1' : 'transparent',
+              borderBottom: `2px solid ${isActive ? '#A82820' : 'transparent'}`,
+              background: isActive ? '#FBF8F1' : 'transparent',
               fontFamily: "'JetBrains Mono', monospace",
               fontSize: '10px',
               fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '0.04em',
-              color: secondaryTab === tab.id ? '#A82820' : '#4A5159',
+              color: isActive ? '#A82820' : '#4A5159',
               cursor: 'pointer',
               transition: 'color 0.15s, border-color 0.15s, background 0.15s',
               WebkitTapHighlightColor: 'transparent',
@@ -94,10 +143,11 @@ function AppShell() {
               gap: '2px',
             }}
           >
-            <span style={{ fontSize: '14px' }}>{tab.icon}</span>
+            <Icon aria-hidden="true" size={16} strokeWidth={2.2} />
             <span>{tab.label}</span>
           </button>
-        ))}
+          );
+        })}
       </div>
 
       {/* Main content area */}
@@ -106,22 +156,24 @@ function AppShell() {
           flex: 1,
           overflowY: 'auto',
           overflowX: 'hidden',
-          paddingBottom: secondaryTab === 'os' ? '72px' : secondaryTab === 'lane' ? '0' : '16px',
+          paddingBottom: activeTab === 'os' ? '72px' : activeTab === 'lane' ? '0' : '16px',
           WebkitOverflowScrolling: 'touch',
         }}
       >
-        {secondaryTab === 'os' && renderStep()}
-        {secondaryTab === 'manual' && <FieldManual />}
-        {secondaryTab === 'scanner' && <ClaimScanner />}
-        {secondaryTab === 'lane' && (
-          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <LaneSelector />
-          </div>
-        )}
+        <Suspense fallback={<SectionLoading />}>
+          {activeTab === 'os' && renderStep()}
+          {activeTab === 'manual' && <FieldManual />}
+          {activeTab === 'scanner' && <ClaimScanner />}
+          {activeTab === 'lane' && (
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <LaneSelector />
+            </div>
+          )}
+        </Suspense>
       </main>
 
       {/* Bottom navigation (only for OS tab) */}
-      {secondaryTab === 'os' && <BottomNav />}
+      {activeTab === 'os' && <BottomNav />}
 
       {/* Toast */}
       <Toast />
