@@ -8,7 +8,7 @@ import BottomNav from '@/components/BottomNav';
 import DraftBanner from '@/components/DraftBanner';
 import Toast from '@/components/Toast';
 import { useUiActions, useUiState, type StepId } from '@/contexts/AppState';
-import { BookOpen, CalendarDays, Compass, Handshake, Library, MessageSquare, Search, Zap, type LucideIcon } from 'lucide-react';
+import { BookOpen, CalendarDays, Compass, Handshake, Library, MessageSquare, Search, Settings2, Zap, type LucideIcon } from 'lucide-react';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import Activate from './steps/Activate';
@@ -17,7 +17,7 @@ import Prepare from './steps/Prepare';
 import Qualify from './steps/Qualify';
 import Report from './steps/Report';
 
-type SecondaryTab = 'os' | 'manual' | 'scanner' | 'lane' | 'network' | 'roleplay' | 'story' | 'cadence';
+type SecondaryTab = 'os' | 'manual' | 'scanner' | 'lane' | 'network' | 'roleplay' | 'story' | 'cadence' | 'settings';
 
 const ClaimScanner = lazy(() => import('./ClaimScanner'));
 const FieldManual = lazy(() => import('./FieldManual'));
@@ -26,6 +26,7 @@ const NetworkTracker = lazy(() => import('./NetworkTracker'));
 const RoleplaySimulator = lazy(() => import('./RoleplaySimulator'));
 const StoryCardBuilder = lazy(() => import('./StoryCardBuilder'));
 const WeeklyCadencePlanner = lazy(() => import('./WeeklyCadencePlanner'));
+const SettingsPage = lazy(() => import('./Settings'));
 
 const STEP_IDS: StepId[] = ['prepare', 'qualify', 'activate', 'followup', 'report'];
 
@@ -38,10 +39,11 @@ const SECONDARY_TABS: { id: SecondaryTab; label: string; Icon: LucideIcon; path:
   { id: 'roleplay', label: 'Roleplay',     Icon: MessageSquare, path: '/roleplay' },
   { id: 'story',    label: 'Story Vault',  Icon: Library,       path: '/story' },
   { id: 'cadence',  label: 'War Plan',     Icon: CalendarDays,  path: '/cadence' },
+  { id: 'settings', label: 'Settings',     Icon: Settings2,     path: '/settings' },
 ];
 
 function isSecondaryTab(value: string | undefined): value is SecondaryTab {
-  return value === 'os' || value === 'manual' || value === 'scanner' || value === 'lane' || value === 'network' || value === 'roleplay' || value === 'story' || value === 'cadence';
+  return value === 'os' || value === 'manual' || value === 'scanner' || value === 'lane' || value === 'network' || value === 'roleplay' || value === 'story' || value === 'cadence' || value === 'settings';
 }
 
 function isStepId(value: string | undefined): value is StepId {
@@ -189,6 +191,7 @@ function AppShell() {
             </div>
           )}
           {activeTab === 'cadence' && <WeeklyCadencePlanner />}
+          {activeTab === 'settings' && <SettingsPage />}
         </Suspense>
       </main>
 
