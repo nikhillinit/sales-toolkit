@@ -1,0 +1,35 @@
+{
+  "build_command": "pnpm run build",
+  "capabilities": [],
+  "dev_command": "pnpm run dev",
+  "env_vars": {},
+  "experiments": null,
+  "git_remote": {
+    "repo_url": "s3://vida-prod-gitrepo/webdev-git/310419663032296685/VdyFzY6qQUooPsDvCmfnVh",
+    "access_key_id": "ASIAZV3A2ECZKQUKQ3J4",
+    "secret_access_key": "FzuHNXoQPz/sy+Tkc/85jNDNA/1e5/oHa0CznfFC",
+    "session_token": "IQoJb3JpZ2luX2VjEOv//////////wEaCXVzLWVhc3QtMSJHMEUCIQCj4RkVeJNUg4kJcfGqgB2/jOUt7p6aOzRcJq7q2RVDuwIgft9Nk44qHchPHDh7t3TDID622lyhRDIE1UcWcUz2rOIq/gMItP//////////ARAEGgw2NjUzODYwOTg4NjYiDCI9P85En/ZF1jEoGSrSAxo9CcoxTDFgf6hWm5GSuyGTaHjsBaJVkAlxjKQESCEiS9+MyZzimTZPUWlDC46yFhEPNlKg1DDHneMIa1DJLgvhSWMQQgtu+0mF/b+WUJL9qnthwechvXTRKDptJF3jvm+2peYY5vLrkr4O8IqmK8jjnV51j7QkSws7nqB2OavGoI/KgnfunoqlXDJPoSlQDzguHtrm2a1PojP0SFoFbw3FsgnA2xsCb+O/eNL74mE0lJxxKLoGIhKMeF6D3Z6pp2tLv4ZbcWfqPmYVARUFRqzcUxV4LOSn1Ogm3Lk5uNuAjfvnLAFlHQN06jLYpsGp1o0VgYLPH/ys25WlfyZj8yp3BTG4WUfw/kOiXyW9jUrXdLsLOIuRxwQ/Yheu2TdY0sQUr5CUspM6HsGUchLU7v2gKVilzf6qaeHpoNjhepR1sTOdXSHTCAtjV3sEehQGcY3BFvsMcamCj/TKG+FGkhH4yx4Qk9OTDtyWTBLk06C/Skb9BmcLJ3+MQcpIObovEbK4EVn9Ke3MRHkaY9jSnBdop0wbsWQPdzW8Cj8jypa92Tec4LaUi4ceLjmpYlrj8JJwZIit7b5KihhRMSGIxXWCkebNEhXQJpUxxIRaiHMojNsw+Pip0AY6nQFxvaLf9C6Ee9kgbS3sRmL/03dwCVNqiF+UsVoxlfwViGtvjl50eJZ4hRw6dyLzoUbtnIuL2Cjlu0A5Eus3s99uQ2kfH8VdErAb1NDe01gKVPlCeuQ7jpLsYqHWwV7xs1MC2XXBsqZ4RJb8HU2bgDGwsduUnTojUTorapR8GySYlN5HsX0xfXsVB+AKziN+w6nj64sCiWU+m/re7hd2",
+    "expiration": "2026-05-18T14:42:00.000Z"
+  },
+  "name": "restless-field-toolkit",
+  "path": "/home/ubuntu/restless-field-toolkit",
+  "port": 3000,
+  "secrets": {
+    "BUILT_IN_FORGE_API_KEY": "Pd4EMPLzPbiqqyJh9WTUXX",
+    "BUILT_IN_FORGE_API_URL": "https://forge.manus.ai",
+    "JWT_SECRET": "PHNgQHng9F6oKd9FqjEbdX",
+    "OAUTH_SERVER_URL": "https://api.manus.im",
+    "OWNER_NAME": "Nikhil Bhambi",
+    "OWNER_OPEN_ID": "Gw6J5dsfCjMJTxJ8utjHBn",
+    "VITE_ANALYTICS_ENDPOINT": "https://manus-analytics.com",
+    "VITE_ANALYTICS_WEBSITE_ID": "0cb3017d-f4b0-42f6-9173-2148aeaec68d",
+    "VITE_APP_ID": "VdyFzY6qQUooPsDvCmfnVh",
+    "VITE_APP_LOGO": "",
+    "VITE_APP_TITLE": "Restless Field Toolkit — Unified Signal OS",
+    "VITE_FRONTEND_FORGE_API_KEY": "3C2YLPRWy5aZk8JsAARC9e",
+    "VITE_FRONTEND_FORGE_API_URL": "https://forge.manus.ai",
+    "VITE_OAUTH_PORTAL_URL": "https://manus.im"
+  },
+  "template_id": "web-static",
+  "test_command": "pnpm test"
+}
