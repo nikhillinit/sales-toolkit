@@ -12,6 +12,7 @@ import {
 import { idbGet, idbUpdate } from '@/lib/storage/idb';
 import { STORAGE_KEYS } from '@/lib/storage/keys';
 import { MapView } from '@/components/Map';
+import { readManualCTAContext } from '@shared/objections';
 
 export default function NetworkTracker() {
   const { toast } = useToastActions();
@@ -23,6 +24,22 @@ export default function NetworkTracker() {
 
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+
+  // Prefill from manual CTA — fires once on mount, clears history.state after reading
+  const prefillApplied = useRef(false);
+  useEffect(() => {
+    if (prefillApplied.current) return;
+    prefillApplied.current = true;
+    const ctx = readManualCTAContext();
+    if (!ctx?.prefill) return;
+    // buyerWords → Named Human field (if the CTA carried a name)
+    if (ctx.prefill.buyerWords) setContactName(ctx.prefill.buyerWords);
+    // Scroll Log Contact panel into view and focus the Named Human input
+    setTimeout(() => {
+      document.getElementById('network-contact')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById('network-contact')?.focus();
+    }, 250);
+  }, []);
 
   useEffect(() => {
     idbGet<NetworkLog[]>(STORAGE_KEYS.repCaptures, [])
