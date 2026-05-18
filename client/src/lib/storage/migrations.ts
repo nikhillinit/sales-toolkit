@@ -17,12 +17,13 @@ export type MigrationResult =
   | 'failed';
 
 export interface MigrationStatus {
-  version: 1;
+  version: 1 | 2;
   completedAt: string;
   slices: {
     storyVault: MigrationResult;
     laneSelector: MigrationResult;
     networkLogs: MigrationResult;
+    repCaptures: MigrationResult;
     appState: MigrationResult;
   };
 }
@@ -90,13 +91,30 @@ export async function runMigrations(): Promise<MigrationStatus> {
     isValid: v => v !== null && typeof v === 'object',
   });
 
-  // Network Logs
+  // Network Logs (v1 → IDB v1 key, kept for backward compat)
   const legacyNetwork = readLocalStorage<unknown[]>(LEGACY_KEYS.networkLogs);
   const networkLogs = await migrateIfEmpty({
     targetKey: STORAGE_KEYS.networkLogs,
     legacyValue: legacyNetwork,
     isValid: v => Array.isArray(v) && v.length > 0,
   });
+
+  // Rep Captures (v2 migration: copy v1:networkLogs IDB data → v2:repCaptures)
+  // Non-destructive: only writes if v2 key is empty.
+  const repCaptures = await (async (): Promise<MigrationResult> => {
+    try {
+      const v2Existing = await idbGet<unknown[] | null>(STORAGE_KEYS.repCaptures, null);
+      const v2HasData = Array.isArray(v2Existing) && v2Existing.length > 0;
+      if (v2HasData) return 'skipped-existing-idb';
+      // Read from v1 IDB key (already migrated above or pre-existing)
+      const v1Data = await idbGet<unknown[] | null>(STORAGE_KEYS.networkLogs, null);
+      if (!Array.isArray(v1Data) || v1Data.length === 0) return 'missing-legacy';
+      await idbSet(STORAGE_KEYS.repCaptures, v1Data);
+      return 'migrated';
+    } catch {
+      return 'failed';
+    }
+  })();
 
   // AppState — read from sessionStorage, split into four IDB slices
   // The legacy key stores the entire AppStateData snapshot as a single object.
@@ -139,9 +157,9 @@ export async function runMigrations(): Promise<MigrationStatus> {
   }
 
   const status: MigrationStatus = {
-    version: 1,
+    version: 2,
     completedAt: new Date().toISOString(),
-    slices: { storyVault, laneSelector, networkLogs, appState },
+    slices: { storyVault, laneSelector, networkLogs, repCaptures, appState },
   };
 
   await idbSet(STORAGE_KEYS.migrationStatus, status);

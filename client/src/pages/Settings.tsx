@@ -13,13 +13,13 @@ import { useToastActions } from '@/contexts/AppState';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function gatherExportData(): Promise<FieldKitExport> {
-  const [storyVault, trials, stats, laneSelector, networkLogs, uiProgress, roleplayDebriefs] =
+  const [storyVault, trials, stats, laneSelector, repCaptures, uiProgress, roleplayDebriefs] =
     await Promise.all([
       idbGet(STORAGE_KEYS.storyVault, []),
       idbGet(STORAGE_KEYS.trials, []),
       idbGet(STORAGE_KEYS.stats, {}),
       idbGet(STORAGE_KEYS.laneSelector, null),
-      idbGet(STORAGE_KEYS.networkLogs, []),
+      idbGet(STORAGE_KEYS.repCaptures, []),
       idbGet(STORAGE_KEYS.uiProgress, {}),
       idbGet(STORAGE_KEYS.roleplayDebriefs, []),
     ]);
@@ -27,13 +27,14 @@ async function gatherExportData(): Promise<FieldKitExport> {
   return {
     schemaVersion: EXPORT_SCHEMA_VERSION as 1,
     exportedAt: new Date().toISOString(),
-    appVersion: '1.0.0',
+    appVersion: '2.0.0',
     data: {
       storyVault: storyVault as FieldKitExport['data']['storyVault'],
       trials: trials as FieldKitExport['data']['trials'],
       stats: stats as FieldKitExport['data']['stats'],
       laneSelector: laneSelector as FieldKitExport['data']['laneSelector'],
-      networkLogs: networkLogs as FieldKitExport['data']['networkLogs'],
+      repCaptures: repCaptures as FieldKitExport['data']['repCaptures'],
+      networkLogs: [] as FieldKitExport['data']['networkLogs'],
       uiProgress: uiProgress as FieldKitExport['data']['uiProgress'],
       roleplayDebriefs: roleplayDebriefs as FieldKitExport['data']['roleplayDebriefs'],
     },
@@ -104,7 +105,7 @@ export default function Settings() {
         idbSet(STORAGE_KEYS.trials, data.trials),
         idbSet(STORAGE_KEYS.stats, data.stats),
         idbSet(STORAGE_KEYS.laneSelector, data.laneSelector),
-        idbSet(STORAGE_KEYS.networkLogs, data.networkLogs),
+        idbSet(STORAGE_KEYS.repCaptures, data.repCaptures),
         idbSet(STORAGE_KEYS.uiProgress, data.uiProgress),
         idbSet(STORAGE_KEYS.roleplayDebriefs, data.roleplayDebriefs),
       ]);

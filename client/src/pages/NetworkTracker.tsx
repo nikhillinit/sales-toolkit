@@ -25,7 +25,7 @@ export default function NetworkTracker() {
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
 
   useEffect(() => {
-    idbGet<NetworkLog[]>(STORAGE_KEYS.networkLogs, [])
+    idbGet<NetworkLog[]>(STORAGE_KEYS.repCaptures, [])
       .then(stored => setLogs(stored))
       .catch(() => {});
   }, []);
@@ -109,7 +109,7 @@ export default function NetworkTracker() {
       createdAt: new Date().toISOString(),
     };
 
-    idbUpdate<NetworkLog[]>(STORAGE_KEYS.networkLogs, existing => [...(existing ?? []), newEntry]).catch(() => {});
+    idbUpdate<NetworkLog[]>(STORAGE_KEYS.repCaptures, existing => [...(existing ?? []), newEntry]).catch(() => {});
     setLogs(prev => [...prev, newEntry]);
     setContactName('');
     setCommunity('');
@@ -117,7 +117,7 @@ export default function NetworkTracker() {
   };
 
   const removeLog = (id: string) => {
-    idbUpdate<NetworkLog[]>(STORAGE_KEYS.networkLogs, existing => (existing ?? []).filter(l => l.id !== id)).catch(() => {});
+    idbUpdate<NetworkLog[]>(STORAGE_KEYS.repCaptures, existing => (existing ?? []).filter(l => l.id !== id)).catch(() => {});
     setLogs(prev => prev.filter(log => log.id !== id));
     toast('Network contact removed.');
   };

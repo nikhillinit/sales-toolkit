@@ -112,10 +112,21 @@ export const FieldKitExportSchema = z.object({
     trials: z.array(TrialSchema).default([]),
     stats: StatsSchema.default({ out: 0, live: 0, qual: 0, ship: 0, yes: 0, exit: 0, retest: 0, blocker: 0 }),
     laneSelector: LaneSelectorSchema.default(null),
+    /**
+     * repCaptures is the v2 canonical name for what was previously networkLogs.
+     * For backward compatibility, the schema also accepts networkLogs and
+     * promotes it to repCaptures on parse via .transform().
+     */
+    repCaptures: z.array(NetworkLogSchema).default([]),
+    /** @deprecated — accepted on import for backward compat; written to repCaptures */
     networkLogs: z.array(NetworkLogSchema).default([]),
     uiProgress: UiProgressSchema.default({}),
     roleplayDebriefs: z.array(RoleplayDebriefSchema).default([]),
-  }),
+  }).transform(d => ({
+    ...d,
+    // If repCaptures is empty but networkLogs has data (old export), promote it
+    repCaptures: d.repCaptures.length > 0 ? d.repCaptures : d.networkLogs,
+  })),
 });
 
 export type FieldKitExport = z.infer<typeof FieldKitExportSchema>;
