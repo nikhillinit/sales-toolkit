@@ -1,8 +1,23 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+/**
+ * Draft context — persists formDraft to IndexedDB (fieldkit:v1:formDraft).
+ * Replaces sessionStorage. Debounced save: 300ms.
+ * Flushes on visibilitychange (hidden) and pagehide.
+ */
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { idbGet, idbSet, idbDel } from '@/lib/storage/idb';
+import { STORAGE_KEYS } from '@/lib/storage/keys';
 import { useStatsActions, useStatsState } from './stats';
 import { useTrialActions, useTrialsState } from './trials';
 import { useUiActions, useUiState } from './ui';
-import { DEFAULT_RING_STATS, STORAGE_KEY, type AppStateData } from './types';
+import { DEFAULT_RING_STATS, type AppStateData } from './types';
 
 type FormDraft = Record<string, string | boolean>;
 
@@ -21,6 +36,8 @@ interface DraftActionsValue {
 const DraftStateContext = createContext<DraftStateValue | null>(null);
 const DraftActionsContext = createContext<DraftActionsValue | null>(null);
 
+const DEBOUNCE_MS = 300;
+
 export function DraftProvider({ children }: { children: React.ReactNode }) {
   const uiState = useUiState();
   const { restoreUiState } = useUiActions();
@@ -28,17 +45,58 @@ export function DraftProvider({ children }: { children: React.ReactNode }) {
   const { restoreStats } = useStatsActions();
   const trials = useTrialsState();
   const { restoreTrials } = useTrialActions();
+
   const [formDraft, setFormDraft] = useState<FormDraft>({});
   const [hasDraft, setHasDraft] = useState(false);
+  const [isHydrated, setHydrated] = useState(false);
+  const pendingRef = useRef(false);
+  const formDraftRef = useRef(formDraft);
 
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
-      if (raw) setHasDraft(true);
-    } catch {
-      /* ignore */
+    formDraftRef.current = formDraft;
+  }, [formDraft]);
+
+  // Hydrate: check if a draft exists
+  useEffect(() => {
+    idbGet<FormDraft | null>(STORAGE_KEYS.formDraft, null)
+      .then(stored => {
+        if (stored && typeof stored === 'object' && Object.keys(stored).length > 0) {
+          setFormDraft(stored);
+          setHasDraft(true);
+        }
+        setHydrated(true);
+      })
+      .catch(() => setHydrated(true));
+  }, []);
+
+  const flush = useCallback(() => {
+    if (!pendingRef.current) return;
+    pendingRef.current = false;
+    if (Object.keys(formDraftRef.current).length === 0) {
+      idbDel(STORAGE_KEYS.formDraft).catch(() => {});
+    } else {
+      idbSet(STORAGE_KEYS.formDraft, formDraftRef.current).catch(() => {});
     }
   }, []);
+
+  // Debounced save
+  useEffect(() => {
+    if (!isHydrated) return;
+    pendingRef.current = true;
+    const t = window.setTimeout(flush, DEBOUNCE_MS);
+    return () => window.clearTimeout(t);
+  }, [formDraft, isHydrated, flush]);
+
+  // Flush on background / tab close
+  useEffect(() => {
+    const onHide = () => { if (document.visibilityState === 'hidden') flush(); };
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', flush);
+    };
+  }, [flush]);
 
   const updateFormDraft = useCallback((fields: FormDraft) => {
     setFormDraft(prev => ({ ...prev, ...fields }));
@@ -52,38 +110,26 @@ export function DraftProvider({ children }: { children: React.ReactNode }) {
       ringStats: DEFAULT_RING_STATS,
       formDraft,
     };
-
-    try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
-      setHasDraft(true);
-    } catch {
-      /* quota error */
-    }
-  }, [formDraft, stats, trials, uiState]);
+    idbSet(STORAGE_KEYS.formDraft, snapshot.formDraft).catch(() => {});
+    idbSet(STORAGE_KEYS.trials, snapshot.trials).catch(() => {});
+    idbSet(STORAGE_KEYS.stats, snapshot.stats).catch(() => {});
+    idbSet(STORAGE_KEYS.uiProgress, {
+      currentStep: snapshot.currentStep,
+      completedSteps: snapshot.completedSteps,
+      gearsLocked: snapshot.gearsLocked,
+    }).catch(() => {});
+    setHasDraft(true);
+  }, [uiState, trials, stats, formDraft]);
 
   const restoreDraft = useCallback((): boolean => {
-    try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
-      if (!raw) return false;
-
-      const snapshot = JSON.parse(raw) as Partial<AppStateData>;
-      restoreUiState(snapshot);
-      if (snapshot.stats) restoreStats(snapshot.stats);
-      if (snapshot.trials) restoreTrials(snapshot.trials);
-      if (snapshot.formDraft) setFormDraft(snapshot.formDraft);
-      setHasDraft(false);
-      return true;
-    } catch {
-      return false;
-    }
-  }, [restoreStats, restoreTrials, restoreUiState]);
+    // Restoration is handled by each slice's own hydration on mount.
+    // This is a no-op in the IDB model — data is always restored on mount.
+    return hasDraft;
+  }, [hasDraft]);
 
   const discardDraft = useCallback(() => {
-    try {
-      sessionStorage.removeItem(STORAGE_KEY);
-    } catch {
-      /* ignore */
-    }
+    idbDel(STORAGE_KEYS.formDraft).catch(() => {});
+    setFormDraft({});
     setHasDraft(false);
   }, []);
 

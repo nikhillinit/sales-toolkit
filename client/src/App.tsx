@@ -7,6 +7,7 @@ import { StoryVaultProvider } from '@/contexts/StoryVaultContext';
 import NotFound from '@/pages/NotFound';
 import { useEffect } from 'react';
 import { Route, Switch, useLocation } from 'wouter';
+import { AppDataGate } from './components/AppDataGate';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Home from './pages/Home';
@@ -44,11 +45,13 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
-        <AppStateProvider>
-          <StoryVaultProvider>
-            <Router />
-          </StoryVaultProvider>
-        </AppStateProvider>
+        <AppDataGate>
+          <AppStateProvider>
+            <StoryVaultProvider>
+              <Router />
+            </StoryVaultProvider>
+          </AppStateProvider>
+        </AppDataGate>
       </ThemeProvider>
     </ErrorBoundary>
   );

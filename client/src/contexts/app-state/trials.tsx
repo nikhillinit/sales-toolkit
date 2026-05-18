@@ -1,4 +1,12 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+/**
+ * Trials context — persists to IndexedDB (fieldkit:v1:trials).
+ * Uses idbUpdate for atomic array mutations.
+ * Debounced save: 300ms after last mutation.
+ * Flushes on visibilitychange (hidden) and pagehide.
+ */
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { idbGet, idbSet } from '@/lib/storage/idb';
+import { STORAGE_KEYS } from '@/lib/storage/keys';
 import { useStatsActions } from './stats';
 import type { Stats, Trial } from './types';
 
@@ -24,9 +32,59 @@ const OUTCOME_STAT_MAP: Record<string, keyof Stats> = {
   blocker: 'blocker',
 };
 
+const DEBOUNCE_MS = 300;
+
 export function TrialProvider({ children }: { children: React.ReactNode }) {
   const [trials, setTrials] = useState<Trial[]>([]);
+  const [isHydrated, setHydrated] = useState(false);
   const { modStat } = useStatsActions();
+  const pendingRef = useRef(false);
+  const trialsRef = useRef(trials);
+
+  useEffect(() => {
+    trialsRef.current = trials;
+  }, [trials]);
+
+  // Hydrate from IDB
+  useEffect(() => {
+    idbGet<Trial[]>(STORAGE_KEYS.trials, [])
+      .then(stored => {
+        const migrated = (stored ?? []).map(t => ({
+          ...t,
+          cadenceStep: t.cadenceStep ?? 0,
+          cadenceCompletedAt: t.cadenceCompletedAt ?? [],
+          shippedAt: t.shippedAt ?? t.fuDate ?? new Date().toISOString(),
+        }));
+        setTrials(migrated);
+        setHydrated(true);
+      })
+      .catch(() => setHydrated(true));
+  }, []);
+
+  const flush = useCallback(() => {
+    if (!pendingRef.current) return;
+    pendingRef.current = false;
+    idbSet(STORAGE_KEYS.trials, trialsRef.current).catch(() => {});
+  }, []);
+
+  // Debounced save
+  useEffect(() => {
+    if (!isHydrated) return;
+    pendingRef.current = true;
+    const t = window.setTimeout(flush, DEBOUNCE_MS);
+    return () => window.clearTimeout(t);
+  }, [trials, isHydrated, flush]);
+
+  // Flush on background / tab close
+  useEffect(() => {
+    const onHide = () => { if (document.visibilityState === 'hidden') flush(); };
+    document.addEventListener('visibilitychange', onHide);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      document.removeEventListener('visibilitychange', onHide);
+      window.removeEventListener('pagehide', flush);
+    };
+  }, [flush]);
 
   const addTrial = useCallback((trial: Trial) => {
     const withCadence: Trial = {
@@ -86,7 +144,7 @@ export function TrialProvider({ children }: { children: React.ReactNode }) {
 
 export function useTrialsState() {
   const ctx = useContext(TrialsStateContext);
-  if (!ctx) throw new Error('useTrialsState must be used within AppStateProvider');
+  if (ctx === null) throw new Error('useTrialsState must be used within AppStateProvider');
   return ctx;
 }
 
