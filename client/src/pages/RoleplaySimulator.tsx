@@ -10,7 +10,10 @@
  * Design: Unified Signal OS — Barlow Condensed, JetBrains Mono, Source Sans 3,
  * brick red #A82820, warm paper #F4F1EA.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { BookOpen } from 'lucide-react';
+import { useStoryVaultContext } from '@/contexts/StoryVaultContext';
+import { buildStoryContextPrefix, generateScripts, type StoryCard } from '@/lib/storyVault';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -558,7 +561,11 @@ const PROVIDERS = [
 
 // ─── Prompt Builders ──────────────────────────────────────────────────────────
 
-function buildBuyerSystemPrompt(persona: Persona, scenario: typeof SCENARIOS[0]): string {
+function buildBuyerSystemPrompt(
+  persona: Persona,
+  scenario: typeof SCENARIOS[0],
+  story?: StoryCard | null,
+): string {
   const scenarioContext = {
     'cold-call': `SCENARIO: Cold Call / Walk-In. You have no prior relationship with this rep. You have maximum skepticism and pitch fatigue. You have heard every pitch. Your default is to end the call quickly.`,
     'warm-intro': `SCENARIO: Warm Intro. Someone you know and respect referred this rep to you. You are slightly more open than usual, but you still evaluate on merit. You will give them a bit more time than a cold call.`,
@@ -566,7 +573,9 @@ function buildBuyerSystemPrompt(persona: Persona, scenario: typeof SCENARIOS[0])
     'objection-heavy': `SCENARIO: Objection Gauntlet. You are going to raise every segment-specific objection you have, one at a time. The rep must earn the right to continue at each turn. Do not make it easy.`,
   }[scenario.id] || scenario.description;
 
-  return `${persona.systemPromptCore}
+  const storyPrefix = story ? `${buildStoryContextPrefix(story)}\n\n` : '';
+
+  return `${storyPrefix}${persona.systemPromptCore}
 
 ${scenarioContext}
 
@@ -719,6 +728,14 @@ export default function RoleplaySimulator() {
   const [feedback, setFeedback] = useState<CoachFeedback | null>(null);
   const [debriefLoading, setDebriefLoading] = useState(false);
 
+  const { vault } = useStoryVaultContext();
+  const [loadedStoryId, setLoadedStoryId] = useState<string | null>(null);
+  const [showStoryPicker, setShowStoryPicker] = useState(false);
+  const loadedStory = useMemo(
+    () => vault.find(s => s.id === loadedStoryId) ?? null,
+    [vault, loadedStoryId],
+  );
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -734,12 +751,12 @@ export default function RoleplaySimulator() {
     setActiveHint(null);
     setLoading(true);
     try {
-      const systemPrompt = buildBuyerSystemPrompt(selectedPersona, selectedScenario);
+      const systemPrompt = buildBuyerSystemPrompt(selectedPersona, selectedScenario, loadedStory);
       const opening = await callLLM(provider, apiKey, model, [{ role: 'user', content: `[The rep has just approached you. React as ${selectedPersona.name} would in a ${selectedScenario.label} scenario. Start from the buyer's perspective — be brief, guarded, or neutral as appropriate.]` }], systemPrompt);
       setMessages([{ role: 'buyer', content: opening, ts: Date.now() }]);
     } catch (e) { setError((e as Error).message); }
     finally { setLoading(false); setTimeout(() => inputRef.current?.focus(), 100); }
-  }, [selectedPersona, selectedScenario, apiKey, provider, model]);
+  }, [selectedPersona, selectedScenario, apiKey, provider, model, loadedStory]);
 
   const sendMessage = useCallback(async () => {
     if (!input.trim() || loading || !selectedPersona || !selectedScenario) return;
@@ -751,14 +768,14 @@ export default function RoleplaySimulator() {
     setLoading(true);
     setError(null);
     try {
-      const systemPrompt = buildBuyerSystemPrompt(selectedPersona, selectedScenario);
+      const systemPrompt = buildBuyerSystemPrompt(selectedPersona, selectedScenario, loadedStory);
       const apiMessages = newMessages.map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content }));
       const reply = await callLLM(provider, apiKey, model, apiMessages, systemPrompt);
       setMessages(prev => [...prev, { role: 'buyer', content: reply, ts: Date.now() }]);
       setTurnCount(prev => prev + 1);
     } catch (e) { setError((e as Error).message); }
     finally { setLoading(false); setTimeout(() => inputRef.current?.focus(), 100); }
-  }, [input, loading, messages, selectedPersona, selectedScenario, provider, apiKey, model]);
+  }, [input, loading, messages, selectedPersona, selectedScenario, provider, apiKey, model, loadedStory]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
@@ -880,6 +897,70 @@ export default function RoleplaySimulator() {
                 {selectedScenario?.id === s.id && <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', fontWeight: 700, color: '#A82820', flexShrink: 0 }}>✓</span>}
               </button>
             ))}
+          </div>
+
+          {/* Story Context (optional) */}
+          <div style={{ marginBottom: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <div className="os-h2" style={{ marginTop: 0, marginBottom: 0 }}>Buyer Backstory (optional)</div>
+              <button
+                onClick={() => setShowStoryPicker(s => !s)}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: 'transparent', border: '1px solid #C8CCD2', borderRadius: '2px', color: '#4A5159', fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em' }}
+              >
+                <BookOpen size={11} /> {showStoryPicker ? 'HIDE' : 'LOAD STORY'}
+              </button>
+            </div>
+            <p style={{ fontSize: '12px', color: '#4A5159', margin: '0 0 8px 0', lineHeight: 1.5 }}>
+              Layer a saved Story Card on top of the persona to give the AI buyer a richer background. Persona and scenario still drive the conversation.
+            </p>
+
+            {loadedStory && (
+              <div style={{ background: '#FBF8F1', border: '1px solid #8A6A14', borderRadius: '3px', padding: '8px 10px', marginBottom: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', fontWeight: 700, color: '#8A6A14', letterSpacing: '0.06em' }}>STORY LOADED</div>
+                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: '14px', color: '#1A1D22', lineHeight: 1.2 }}>{loadedStory.title}</div>
+                  <div style={{ fontSize: '11px', color: '#4A5159', marginTop: '2px', fontStyle: 'italic' }}>
+                    &ldquo;{generateScripts(loadedStory).fifteen}&rdquo;
+                  </div>
+                </div>
+                <button
+                  onClick={() => setLoadedStoryId(null)}
+                  aria-label="Clear loaded story"
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#4A5159', fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', fontWeight: 700, flexShrink: 0 }}
+                >
+                  ✕ CLEAR
+                </button>
+              </div>
+            )}
+
+            {showStoryPicker && (
+              <div style={{ background: '#fff', border: '1px solid #C8CCD2', borderRadius: '3px', padding: '8px', maxHeight: '220px', overflowY: 'auto' }}>
+                {vault.length === 0 ? (
+                  <div style={{ padding: '12px', textAlign: 'center', fontSize: '12px', color: '#4A5159', fontStyle: 'italic' }}>
+                    No saved stories yet. Open the Story Vault tab to create one.
+                  </div>
+                ) : (
+                  vault.map(story => (
+                    <button
+                      key={story.id}
+                      onClick={() => { setLoadedStoryId(story.id); setShowStoryPicker(false); }}
+                      style={{
+                        display: 'block', width: '100%', textAlign: 'left',
+                        padding: '8px 10px', marginBottom: '4px',
+                        background: loadedStoryId === story.id ? '#FBF8F1' : 'transparent',
+                        border: `1px solid ${loadedStoryId === story.id ? '#A82820' : '#EFEBE0'}`,
+                        borderRadius: '2px', cursor: 'pointer', transition: 'all 0.15s',
+                      }}
+                    >
+                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: '13px', color: '#1A1D22', lineHeight: 1.2 }}>{story.title}</div>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', color: '#4A5159', marginTop: '2px', letterSpacing: '0.04em' }}>
+                        {story.character}
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
           {/* CTA row */}

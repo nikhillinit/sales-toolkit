@@ -6,7 +6,11 @@
  * Design: Unified Signal OS — Barlow Condensed display, JetBrains Mono data,
  * Source Sans 3 body, brick red #A82820 primary, warm paper #F4F1EA background.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Copy, Link2, X } from 'lucide-react';
+import { useToastActions } from '@/contexts/AppState';
+import { useStoryVaultContext } from '@/contexts/StoryVaultContext';
+import { generateScripts } from '@/lib/storyVault';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -16,6 +20,7 @@ type Ring = 'green' | 'amber' | 'red';
 interface LaneScore {
   segment: string;
   scores: Score[]; // 6 questions, each 0–2
+  storyId?: string; // optional link to a saved Story Vault card (forward-compatible)
 }
 
 interface SundayPlan {
@@ -223,6 +228,10 @@ export default function LaneSelector() {
   const [saved, setSaved] = useState(false);
   const [customSegment, setCustomSegment] = useState('');
   const [loaded, setLoaded] = useState(false);
+  const [showStoryPicker, setShowStoryPicker] = useState(false);
+
+  const { vault } = useStoryVaultContext();
+  const { toast } = useToastActions();
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -254,6 +263,42 @@ export default function LaneSelector() {
     });
     setSaved(false);
   }, [activeLaneIdx]);
+
+  const linkStoryToActiveLane = useCallback((storyId: string) => {
+    setLaneScores(prev => prev.map((lane, i) =>
+      i === activeLaneIdx ? { ...lane, storyId } : lane
+    ));
+    setShowStoryPicker(false);
+    setSaved(false);
+    toast('Story linked to lane.');
+  }, [activeLaneIdx, toast]);
+
+  const unlinkStoryFromActiveLane = useCallback(() => {
+    setLaneScores(prev => prev.map((lane, i) =>
+      i === activeLaneIdx ? { ...lane, storyId: undefined } : lane
+    ));
+    setSaved(false);
+  }, [activeLaneIdx]);
+
+  const copyLinkedScript = useCallback((text: string) => {
+    try {
+      if (typeof navigator === 'undefined' || !navigator.clipboard) {
+        toast('Copy failed — long-press to copy manually');
+        return;
+      }
+      navigator.clipboard.writeText(text)
+        .then(() => toast('15s script copied.'))
+        .catch(() => toast('Copy failed — long-press to copy manually'));
+    } catch {
+      toast('Copy failed — long-press to copy manually');
+    }
+  }, [toast]);
+
+  const activeLinkedStory = useMemo(
+    () => (activeLane?.storyId ? vault.find(s => s.id === activeLane.storyId) : null) ?? null,
+    [activeLane?.storyId, vault],
+  );
+  const activeLinkBroken = Boolean(activeLane?.storyId && !activeLinkedStory);
 
   const handleSave = useCallback(() => {
     const planWithTimestamp: SundayPlan = { ...plan, savedAt: new Date().toLocaleString() };
@@ -459,6 +504,91 @@ export default function LaneSelector() {
                 <div style={{ fontSize: '12px', color: '#4A5159', marginTop: '6px', fontStyle: 'italic' }}>
                   If two lanes tie, pick the one with the timely trigger.
                 </div>
+              )}
+            </div>
+
+            {/* Linked Story */}
+            <div style={{ background: '#fff', border: '1px solid #C8CCD2', borderRadius: '4px', padding: '12px', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: '14px', color: '#1A1D22' }}>
+                  Proof Story for this Lane
+                </div>
+                {activeLinkedStory && (
+                  <button
+                    onClick={unlinkStoryFromActiveLane}
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: 'transparent', border: '1px solid #C8CCD2', borderRadius: '2px', color: '#4A5159', fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.04em' }}
+                  >
+                    <X size={11} /> UNLINK
+                  </button>
+                )}
+              </div>
+
+              {activeLinkedStory ? (
+                <>
+                  <div style={{ background: '#FBF8F1', borderLeft: '3px solid #2E7D32', padding: '8px 10px', marginBottom: '8px' }}>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', fontWeight: 700, color: '#2E7D32', letterSpacing: '0.06em' }}>LINKED · 15S HOOK</div>
+                    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: '13px', color: '#1A1D22', marginTop: '2px' }}>{activeLinkedStory.title}</div>
+                    <div style={{ fontSize: '12px', color: '#4A5159', fontStyle: 'italic', marginTop: '4px', lineHeight: 1.5 }}>
+                      &ldquo;{generateScripts(activeLinkedStory).fifteen}&rdquo;
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => copyLinkedScript(generateScripts(activeLinkedStory).fifteen)}
+                    style={{ width: '100%', padding: '8px', background: 'transparent', border: '1px solid #2E7D32', color: '#2E7D32', borderRadius: '2px', fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                  >
+                    <Copy size={11} /> COPY 15S HOOK
+                  </button>
+                </>
+              ) : activeLinkBroken ? (
+                <div style={{ background: '#FEECEC', border: '1px solid #A82820', borderRadius: '2px', padding: '8px 10px' }}>
+                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', fontWeight: 700, color: '#A82820', letterSpacing: '0.06em', marginBottom: '4px' }}>LINKED STORY REMOVED</div>
+                  <div style={{ fontSize: '12px', color: '#4A5159', marginBottom: '8px' }}>The story that was linked here has been deleted from the vault.</div>
+                  <button
+                    onClick={unlinkStoryFromActiveLane}
+                    style={{ padding: '6px 12px', background: 'transparent', border: '1px solid #A82820', color: '#A82820', borderRadius: '2px', fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em', cursor: 'pointer' }}
+                  >
+                    ✕ CLEAR BROKEN LINK
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p style={{ fontSize: '12px', color: '#4A5159', margin: '0 0 8px 0', lineHeight: 1.5 }}>
+                    Attach a real customer story to remember why this lane is winnable. The 15-second hook is one tap away during a live call.
+                  </p>
+                  <button
+                    onClick={() => setShowStoryPicker(s => !s)}
+                    style={{ width: '100%', padding: '8px', background: 'transparent', border: '1px solid #C8CCD2', color: '#4A5159', borderRadius: '2px', fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                  >
+                    <Link2 size={11} /> {showStoryPicker ? 'HIDE PICKER' : 'LINK A STORY'}
+                  </button>
+                  {showStoryPicker && (
+                    <div style={{ marginTop: '8px', background: '#FBF8F1', border: '1px solid #C8CCD2', borderRadius: '2px', padding: '6px', maxHeight: '200px', overflowY: 'auto' }}>
+                      {vault.length === 0 ? (
+                        <div style={{ padding: '10px', textAlign: 'center', fontSize: '12px', color: '#4A5159', fontStyle: 'italic' }}>
+                          No saved stories yet. Open the Story Vault tab to create one.
+                        </div>
+                      ) : (
+                        vault.map(story => (
+                          <button
+                            key={story.id}
+                            onClick={() => linkStoryToActiveLane(story.id)}
+                            style={{
+                              display: 'block', width: '100%', textAlign: 'left',
+                              padding: '6px 8px', marginBottom: '4px',
+                              background: '#fff', border: '1px solid #EFEBE0',
+                              borderRadius: '2px', cursor: 'pointer',
+                            }}
+                          >
+                            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: '13px', color: '#1A1D22', lineHeight: 1.2 }}>{story.title}</div>
+                            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '9px', color: '#4A5159', marginTop: '2px', letterSpacing: '0.04em' }}>
+                              {story.character}
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

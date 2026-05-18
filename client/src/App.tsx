@@ -3,6 +3,7 @@
  * Root component. Wraps app with AppStateProvider and ThemeProvider.
  */
 import { AppStateProvider } from '@/contexts/AppState';
+import { StoryVaultProvider } from '@/contexts/StoryVaultContext';
 import NotFound from '@/pages/NotFound';
 import { useEffect } from 'react';
 import { Route, Switch, useLocation } from 'wouter';
@@ -29,6 +30,9 @@ function Router() {
       <Route path="/manual" component={Home} />
       <Route path="/scanner" component={Home} />
       <Route path="/lane" component={Home} />
+      <Route path="/network" component={Home} />
+      <Route path="/roleplay" component={Home} />
+      <Route path="/story" component={Home} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
@@ -40,7 +44,9 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
         <AppStateProvider>
-          <Router />
+          <StoryVaultProvider>
+            <Router />
+          </StoryVaultProvider>
         </AppStateProvider>
       </ThemeProvider>
     </ErrorBoundary>
