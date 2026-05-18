@@ -30,6 +30,8 @@ function Router() {
       <Route path="/manual" component={Home} />
       <Route path="/scanner" component={Home} />
       <Route path="/lane" component={Home} />
+      <Route path="/network" component={Home} />
+      <Route path="/roleplay" component={Home} />
       <Route path="/story" component={Home} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
