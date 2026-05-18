@@ -6,6 +6,7 @@ import { AppStateProvider } from '@/contexts/AppState';
 import { StoryVaultProvider } from '@/contexts/StoryVaultContext';
 import NotFound from '@/pages/NotFound';
 import Settings from '@/pages/Settings';
+import SyncImport from '@/pages/SyncImport';
 import { useEffect } from 'react';
 import { Route, Switch, useLocation } from 'wouter';
 import { AppDataGate } from './components/AppDataGate';
@@ -38,6 +39,8 @@ function Router() {
       <Route path="/story" component={Home} />
       <Route path="/cadence" component={Home} />
       <Route path="/settings" component={Settings} />
+      <Route path="/api/sync" component={SyncImport} />
+      <Route path="/sync" component={SyncImport} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

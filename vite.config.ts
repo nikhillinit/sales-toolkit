@@ -151,6 +151,25 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
+/**
+ * Serve the offline HTML at /offline (without the filename) so reps can
+ * navigate to a clean URL and tap "Add to Home Screen". Keeps parity with
+ * the production Express route in server/index.ts.
+ */
+function vitePluginOfflineAlias(): Plugin {
+  return {
+    name: "fieldkit-offline-alias",
+    configureServer(server: ViteDevServer) {
+      server.middlewares.use((req, _res, next) => {
+        if (req.url === "/offline" || req.url === "/offline/") {
+          req.url = "/offline/Restless_FieldKit_Offline_v4.2.html";
+        }
+        next();
+      });
+    },
+  };
+}
+
 function vitePluginStorageProxy(): Plugin {
   return {
     name: "manus-storage-proxy",
@@ -247,8 +266,11 @@ const pwaPlugin = VitePWA({
   },
   workbox: {
     globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-    // Do not cache Manus dev/debug endpoints or analytics
-    navigateFallbackDenylist: [/^\/__manus__/, /^\/manus-storage/, /^\/_/],
+    // Do not cache Manus dev/debug endpoints or analytics.
+    // /offline must hit the server (or its precached copy) and never fall
+    // back to the SPA shell — it's the standalone offline HTML toolkit.
+    // /api/sync must reach the SPA but never be intercepted as a stale cache.
+    navigateFallbackDenylist: [/^\/__manus__/, /^\/manus-storage/, /^\/_/, /^\/offline(\/|$)/, /^\/api\//],
     runtimeCaching: [
       {
         urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -275,7 +297,7 @@ const pwaPlugin = VitePWA({
   },
 });
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), vitePluginStorageProxy(), pwaPlugin];
+const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), vitePluginStorageProxy(), vitePluginOfflineAlias(), pwaPlugin];
 
 export default defineConfig({
   plugins,

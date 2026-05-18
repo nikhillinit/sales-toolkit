@@ -2232,13 +2232,16 @@ tr { break-inside: avoid; page-break-inside: avoid; }
 
 <!-- postMessage scroll bridge: parent app sends {type:"scrollToPage", pageId:"pXX"} -->
 <script>
-  window.addEventListener("message", function(e) {
-    if (e.origin !== window.location.origin) return;
-    if (e.data && e.data.type === "scrollToPage") {
-      var el = document.getElementById(e.data.pageId);
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  });
+  (function(){
+    var ALLOWED_ORIGINS = ["https://sales-toolkit.replit.app"];
+    window.addEventListener("message", function(e) {
+      if (e.origin !== window.location.origin && ALLOWED_ORIGINS.indexOf(e.origin) === -1) return;
+      if (e.data && e.data.type === "scrollToPage") {
+        var el = document.getElementById(e.data.pageId);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  })();
 </script>
 </body>
 </html>
