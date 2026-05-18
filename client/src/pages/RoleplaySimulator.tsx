@@ -16,6 +16,8 @@ import { useStoryVaultContext } from '@/contexts/StoryVaultContext';
 import { idbGet, idbSet } from '@/lib/storage/idb';
 import { STORAGE_KEYS } from '@/lib/storage/keys';
 import { buildStoryContextPrefix, generateScripts, type StoryCard } from '@/lib/storyVault';
+import { useHistoryState } from 'wouter/use-browser-location';
+import type { RoleplayPrefill } from '@shared/objections';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -758,6 +760,25 @@ export default function RoleplaySimulator() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // ── Prefill from Objections Drill button ──────────────────────────────────
+  // When navigated here via setLocation('/roleplay', { state: { __roleplayPrefill } }),
+  // auto-select the objection-heavy scenario and inject the buyer's opening line as a hint.
+  const historyState = useHistoryState<{ __roleplayPrefill?: RoleplayPrefill } | null>();
+  const prefillApplied = useRef(false);
+  useEffect(() => {
+    if (prefillApplied.current) return;
+    const prefill = historyState?.__roleplayPrefill;
+    if (!prefill) return;
+    prefillApplied.current = true;
+    // Select the objection-heavy scenario
+    const objScenario = SCENARIOS.find(s => s.id === 'objection-heavy');
+    if (objScenario) setSelectedScenario(objScenario);
+    // Surface the buyer line as the active hint so the rep knows what's coming
+    setActiveHint(`Buyer will open with: "${prefill.buyerLine}" — ${prefill.hint}`);
+    // Clear the history state so a page refresh doesn't re-apply
+    window.history.replaceState(null, '');
+  }, [historyState]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
   useEffect(() => { const p = PROVIDERS.find(p => p.id === provider); if (p) setModel(p.models[0].id); }, [provider]);
